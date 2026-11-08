@@ -1,16 +1,16 @@
 import type { MediaStream, RTCPeerConnection, RTCRtpSender, RTCIceCandidate, RTCSessionDescription } from 'react-native-webrtc';
 import type RTCDataChannel from 'react-native-webrtc/lib/typescript/RTCDataChannel';
 import { MeetingSpeechTransport, type MeetingAudio, type SpeechPeer } from './meeting-speech';
-import { CAPTION_LIMIT, normalizeInvite, parseCallMessage, validInvite, type Caption, type CaptionKind, type MediaState } from './protocol';
+import { CAPTION_LIMIT, normalizeInvite, parseCallMessage, signalingUrl, validInvite, type Caption, type CaptionKind, type MediaState } from './protocol';
 
 export type CallPhase = 'idle' | 'starting' | 'waiting' | 'connecting' | 'connected' | 'reconnecting' | 'ended' | 'error';
 export type CallState = {
-  phase: CallPhase; code: string; serviceUrl: string; peerName: string; message: string; localStream: MediaStream | null;
+  phase: CallPhase; code: string; serviceUrl: string; inviteServiceUrl: string; peerName: string; message: string; localStream: MediaStream | null;
   remoteStream: MediaStream | null; camera: boolean; microphone: boolean; frontCamera: boolean;
   captions: boolean; channelReady: boolean; localCaption: Caption | null; remoteCaption: Caption | null;
   peerMedia: MediaState; startedAt: number | null; peerSpeech: SpeechPeer;
 };
-export const initialCallState = (): CallState => ({ phase: 'idle', code: '', serviceUrl: '', peerName: '', message: '', localStream: null,
+export const initialCallState = (): CallState => ({ phase: 'idle', code: '', serviceUrl: '', inviteServiceUrl: '', peerName: '', message: '', localStream: null,
   remoteStream: null, camera: true, microphone: false, frontCamera: true, captions: false, channelReady: false,
   localCaption: null, remoteCaption: null, peerMedia: { type: 'media', camera: true, microphone: false, captions: false }, startedAt: null, peerSpeech: 'unknown' });
 type RTC = typeof import('react-native-webrtc');
@@ -35,6 +35,26 @@ export class CallSession {
   private signalQueue: Promise<void> = Promise.resolve();
   private speech: MeetingSpeechTransport | null = null;
   private speechEnabled = true;
+  private appActive = true;
+  private backgroundTimer: ReturnType<typeof setTimeout> | null = null;
+
+  setAppActive(active: boolean) {
+    if (active === this.appActive) return;
+    this.appActive = active;
+    if (this.backgroundTimer) clearTimeout(this.backgroundTimer);
+    this.backgroundTimer = null;
+    if (!['starting', 'waiting', 'connecting', 'connected', 'reconnecting'].includes(this.state.phase)) return;
+    if (!active && this.state.phase !== 'waiting') {
+      this.end('Call ended when TalkBridge went into the background.'); return;
+    }
+    // Let a waiting host briefly switch apps to share an invite. Pause capture
+    // and tell the service to wait for their return before starting negotiation.
+    this.state.localStream?.getVideoTracks().forEach((track) => { track.enabled = active && this.state.camera; });
+    this.state.localStream?.getAudioTracks().forEach((track) => { track.enabled = active && this.state.microphone; });
+    try { this.sendSignal({ type: 'presence', active }); }
+    catch { this.end('The call service disconnected. Start a new call.', true); return; }
+    if (!active) this.backgroundTimer = setTimeout(() => this.end('Your invite closed while TalkBridge was in the background. Start a new call.'), 60000);
+  }
 
   constructor(private readonly rtc: RTC, private readonly createSocket: (url: string) => WebSocket,
     private readonly update: (state: CallState) => void, private readonly onSpeech: (audio: MeetingAudio | null) => void = () => {}) {}
@@ -101,7 +121,15 @@ export class CallSession {
           if (message.type === 'created') {
             if (!validInvite(message.code || '')) throw new Error('Invalid invitation from the call service.');
             if (this.timer) clearTimeout(this.timer);
-            this.patch({ phase: 'waiting', code: message.code, message: 'Share the code with someone to start talking.' }); return;
+            const localUSB = url.startsWith('ws:') && ['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname);
+            const inviteServiceUrl = localUSB && typeof message.serviceUrl === 'string'
+              ? signalingUrl(message.serviceUrl, true) : url;
+            this.patch({ phase: 'waiting', code: message.code, inviteServiceUrl, message: 'Share the invite, then return here to meet your guest.' }); return;
+          }
+          if (message.type === 'waiting_for_host') {
+            if (!validInvite(message.code || '')) throw new Error('Invalid invitation from the call service.');
+            this.patch({ phase: 'connecting', code: message.code, message: 'Your host is sharing the invite. Waiting for them to return to TalkBridge…' });
+            this.timeout(65000, 'Your host did not return. Ask them to open TalkBridge and start a new call.'); return;
           }
           if (message.type === 'ready') {
             if (this.peer || !validInvite(message.code || '') || typeof message.initiator !== 'boolean'
@@ -111,10 +139,12 @@ export class CallSession {
             const peer = new this.rtc.RTCPeerConnection({ iceServers: message.iceServers });
             this.peer = peer;
             const local = this.state.localStream!;
-            local.getVideoTracks().forEach((track) => peer.addTrack(track, local));
-            // Always negotiate an audio slot, even when the caller starts muted.
-            // Microphone permission is requested only when they choose to use it.
-            this.audioSender = peer.addTransceiver(local.getAudioTracks()[0] ?? 'audio', { direction: 'sendrecv', streams: [local] }).sender;
+            if (message.initiator) {
+              local.getVideoTracks().forEach((track) => peer.addTrack(track, local));
+              // The offer reserves audio even when starting without permission.
+              // The answerer must reuse this slot after applying the offer.
+              this.audioSender = peer.addTransceiver(local.getAudioTracks()[0] ?? 'audio', { direction: 'sendrecv', streams: [local] }).sender;
+            }
             peer.addEventListener('icecandidate', (event) => {
               if (!current() || !event.candidate || this.socket?.readyState !== 1) return;
               try { this.sendSignal({ type: 'ice', candidate: event.candidate.toJSON() }); }
@@ -151,6 +181,13 @@ export class CallSession {
             await peer.setRemoteDescription(new this.rtc.RTCSessionDescription(message.description)); if (!current()) return;
             for (const candidate of this.pendingIce.splice(0)) { await peer.addIceCandidate(candidate); if (!current()) return; }
             if ((message.description as RTCSessionDescription).type === 'offer') {
+              const local = this.state.localStream!;
+              local.getVideoTracks().forEach((track) => peer.addTrack(track, local));
+              const audio = peer.getTransceivers().find((item) => item.receiver.track?.kind === 'audio');
+              if (!audio) throw new Error('The host did not offer call audio. Ask them to update TalkBridge and start a new call.');
+              audio.direction = 'sendrecv';
+              this.audioSender = audio.sender;
+              await audio.sender.replaceTrack(local.getAudioTracks()[0] ?? null); if (!current()) return;
               const answer = await peer.createAnswer(); if (!current()) return;
               await peer.setLocalDescription(answer); if (!current()) return;
               this.sendSignal({ type: 'description', description: peer.localDescription?.toJSON() });
@@ -245,9 +282,14 @@ export class CallSession {
         catch (error) { acquired.release(); throw error; }
         if (generation !== this.generation) { acquired.release(); return; }
         local.addTrack(track); acquired.release(false);
-        track.enabled = true;
-      } else track.enabled = !this.state.microphone;
-      this.patch({ microphone: track.enabled }); this.broadcastMedia();
+        track.enabled = this.appActive;
+        this.patch({ microphone: true });
+      } else {
+        const enabled = !this.state.microphone;
+        track.enabled = enabled && this.appActive;
+        this.patch({ microphone: enabled });
+      }
+      this.broadcastMedia();
     } catch { if (generation === this.generation) this.patch({ message: 'Microphone access is unavailable. You can continue signing or typing.' }); }
     finally { if (generation === this.generation) this.microphoneBusy = false; }
   }
@@ -269,6 +311,8 @@ export class CallSession {
     this.speech?.dispose(); this.speech = null; this.onSpeech(null);
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
+    if (this.backgroundTimer) clearTimeout(this.backgroundTimer);
+    this.backgroundTimer = null;
     this.microphoneBusy = false; this.cameraBusy = false;
     // A transport can fail between its ready-state check and send/close. Each
     // resource must still be released even when another resource is already gone.

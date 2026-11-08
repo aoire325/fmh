@@ -149,6 +149,12 @@ describe('focus call controls', () => {
     await act(async () => button('Copy invite')!.click());
     expect(Clipboard.setStringAsync).toHaveBeenCalledWith(createInvite(mockState.code, mockState.serviceUrl));
   });
+  it('copies a reachable LAN invite when the host is connected over Android USB', async () => {
+    mockState.phase = 'waiting'; mockState.code = 'ABCDEFGHJKLM'; mockState.serviceUrl = 'ws://127.0.0.1:8787/calls';
+    mockState.inviteServiceUrl = 'ws://192.168.1.10:8787/calls'; render();
+    await act(async () => button('Copy invite')!.click());
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith(createInvite(mockState.code, mockState.inviteServiceUrl));
+  });
   it('prefills a complete invite when opened from a shared link and waits for Join', () => {
     mockState.phase = 'idle'; mockState.localStream = null;
     mockParams = { code: 'ABCDEFGHJKLM', service: 'wss://host-calls.example.com/calls' }; render();

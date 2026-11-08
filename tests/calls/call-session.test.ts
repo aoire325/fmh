@@ -25,6 +25,8 @@ class Peer extends Events {
   connectionState = 'new'; remoteDescription: unknown = null; localDescription: any = null;
   channel = new Channel(); sender = { replaceTrack: jest.fn(async (_track: Track) => {}) };
   addTrack = jest.fn(); addTransceiver = jest.fn(() => ({ sender: this.sender })); close = jest.fn();
+  offeredAudio = { receiver: { track: { kind: 'audio' } }, sender: { replaceTrack: jest.fn(async (_track: Track | null) => {}) }, direction: 'recvonly' };
+  getTransceivers = jest.fn(() => this.remoteDescription ? [this.offeredAudio] : []);
   createDataChannel = jest.fn(() => this.channel);
   createOffer = jest.fn(async () => ({ type: 'offer', sdp: 'offer' })); createAnswer = jest.fn(async () => ({ type: 'answer', sdp: 'answer' }));
   setLocalDescription = jest.fn(async (value: object) => { this.localDescription = { toJSON: () => value }; });
@@ -167,6 +169,76 @@ describe('call ownership and signaling', () => {
     expect(t.session.state.microphone).toBe(true); expect(audio.release).toHaveBeenCalledWith(false);
     await t.session.toggleMicrophone(); expect(audio.tracks[0].enabled).toBe(false);
     t.session.end(); expect(audio.tracks[0].stop).toHaveBeenCalled();
+  });
+  it.each([false, true])('answers on the offered audio slot, including when initially muted: %s', async (microphone) => {
+    const t = setup();
+    if (microphone) { const audio = new Track(); audio.kind = 'audio'; t.stream.addTrack(audio); }
+    await t.session.start('wss://host/calls', { action: 'join', name: 'Guest', code: 'ABCDEFGHJKLM', microphone, captions: false });
+    t.socket.open(); const peer = await t.ready(false);
+    expect(peer.addTransceiver).not.toHaveBeenCalled();
+    expect(peer.addTrack).not.toHaveBeenCalled();
+    t.socket.message({ type: 'description', description: { type: 'offer', sdp: 'offer' } }); await flush();
+    expect(peer.offeredAudio.direction).toBe('sendrecv');
+    expect(peer.offeredAudio.sender.replaceTrack).toHaveBeenCalledWith(t.stream.getAudioTracks()[0] ?? null);
+    expect(peer.addTrack).toHaveBeenCalledWith(t.stream.getVideoTracks()[0], t.stream);
+    expect(peer.createAnswer).toHaveBeenCalledTimes(1);
+    if (!microphone) {
+      const audio = new Stream(); audio.tracks[0].kind = 'audio'; t.getUserMedia.mockResolvedValueOnce(audio);
+      await t.session.toggleMicrophone();
+      expect(peer.offeredAudio.sender.replaceTrack).toHaveBeenLastCalledWith(audio.tracks[0]);
+      expect(peer.sender.replaceTrack).not.toHaveBeenCalled();
+      expect(t.session.state.microphone).toBe(true);
+    }
+    t.session.end();
+  });
+  it('preserves a waiting invitation while the host shares it and pauses capture until return', async () => {
+    jest.useFakeTimers(); const t = setup(); await t.start();
+    t.socket.message({ type: 'created', code: 'ABCDEFGHJKLM' }); await flush();
+    t.session.setAppActive(false);
+    expect(t.session.state.phase).toBe('waiting'); expect(t.stream.tracks[0].enabled).toBe(false);
+    expect(t.socket.close).not.toHaveBeenCalled();
+    expect(t.socket.send).toHaveBeenLastCalledWith(JSON.stringify({ type: 'presence', active: false }));
+    jest.advanceTimersByTime(30000); t.session.setAppActive(true);
+    expect(t.stream.tracks[0].enabled).toBe(true);
+    expect(t.socket.send).toHaveBeenLastCalledWith(JSON.stringify({ type: 'presence', active: true }));
+    jest.advanceTimersByTime(60000); expect(t.session.state.phase).toBe('waiting'); t.session.end();
+  });
+  it('ends an abandoned invitation after the sharing grace period and still ends active calls on background', async () => {
+    jest.useFakeTimers(); const t = setup(); await t.start();
+    t.socket.message({ type: 'created', code: 'ABCDEFGHJKLM' }); await flush();
+    t.session.setAppActive(false); jest.advanceTimersByTime(60000);
+    expect(t.session.state.phase).toBe('ended'); expect(t.stream.release).toHaveBeenCalled();
+    const active = setup(); await active.start(); const peer = await active.ready(); peer.connect();
+    active.session.setAppActive(false);
+    expect(active.session.state.phase).toBe('ended'); expect(active.stream.release).toHaveBeenCalled();
+  });
+  it('uses the service’s reachable invite address without changing its USB signaling connection', async () => {
+    const t = setup();
+    await t.session.start('ws://127.0.0.1:8787/calls', { action: 'create', name: 'Host', microphone: false, captions: false });
+    t.socket.open(); t.socket.message({ type: 'created', code: 'ABCDEFGHJKLM', serviceUrl: 'ws://192.168.1.10:8787/calls' }); await flush();
+    expect(t.session.state.serviceUrl).toBe('ws://127.0.0.1:8787/calls');
+    expect(t.session.state.inviteServiceUrl).toBe('ws://192.168.1.10:8787/calls'); t.session.end();
+  });
+  it('keeps the configured secure invite address behind a reverse proxy', async () => {
+    const t = setup(); await t.start();
+    t.socket.message({ type: 'created', code: 'ABCDEFGHJKLM', serviceUrl: 'ws://192.168.1.10:8787/calls' }); await flush();
+    expect(t.session.state.inviteServiceUrl).toBe('wss://host/calls'); t.session.end();
+  });
+  it('does not treat permission prompt foreground notifications as a signaling failure', async () => {
+    const t = setup(); let resolve!: (stream: Stream) => void;
+    t.getUserMedia.mockImplementation(() => new Promise((done) => { resolve = done; }));
+    const starting = t.session.start('wss://host/calls', { action: 'create', name: 'Host', microphone: true, captions: false });
+    t.session.setAppActive(true);
+    expect(t.session.state.phase).toBe('starting');
+    resolve(t.stream); await starting; t.socket.open();
+    expect(t.socket.send).toHaveBeenLastCalledWith(JSON.stringify({ type: 'create', name: 'Host' })); t.session.end();
+  });
+  it('allows extra time for a guest waiting for the host to return', async () => {
+    jest.useFakeTimers(); const t = setup(); await t.start();
+    t.socket.message({ type: 'waiting_for_host', code: 'ABCDEFGHJKLM' }); await flush();
+    jest.advanceTimersByTime(30000); expect(t.session.state.phase).toBe('connecting');
+    await t.ready(); jest.advanceTimersByTime(44000); expect(t.session.state.phase).toBe('connecting');
+    t.session.end();
   });
   it('rejects duplicate starts while camera permission is pending', async () => {
     const t = setup(); let resolve!: (stream: Stream) => void;

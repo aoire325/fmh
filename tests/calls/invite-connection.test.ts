@@ -24,6 +24,7 @@ class Peer {
   addEventListener() {}
   addTrack() {}
   addTransceiver() { return { sender: { async replaceTrack() {} } }; }
+  getTransceivers() { return [{ receiver: { track: { kind: 'audio' } }, direction: 'recvonly', sender: { async replaceTrack() {} } }]; }
   createDataChannel() { return { label: 'signbridge-captions-v1', readyState: 'connecting', addEventListener() {}, close() {} }; }
   async createOffer() { return { type: 'offer', sdp: 'v=0' }; }
   async createAnswer() { return { type: 'answer', sdp: 'v=0' }; }
@@ -65,10 +66,12 @@ describe('actual app invitation flow through real call services', () => {
 
   function caller() {
     const peers: Peer[] = [];
+    let peerCreated!: (peer: Peer) => void;
+    const firstPeer = new Promise<Peer>((resolve) => { peerCreated = resolve; });
     const listeners = new Set<() => void>();
     const rtc = {
       mediaDevices: { async getUserMedia() { return new Stream(); } }, MediaStream: Stream,
-      RTCPeerConnection: class extends Peer { constructor() { super(); peers.push(this); } },
+      RTCPeerConnection: class extends Peer { constructor() { super(); peers.push(this); peerCreated(this); } },
       RTCSessionDescription: class { constructor(value: object) { Object.assign(this, value); } },
       RTCIceCandidate: class { constructor(value: object) { Object.assign(this, value); } },
     };
@@ -84,7 +87,7 @@ describe('actual app invitation flow through real call services', () => {
       };
       listeners.add(check); check();
     });
-    return { session, peers, waitFor };
+    return { session, peers, firstPeer, waitFor };
   }
 
   it('reproduces the wrong-server rejection, then joins with the copied host invite and exchanges offer/answer', async () => {
@@ -104,9 +107,28 @@ describe('actual app invitation flow through real call services', () => {
     const target = resolveCallTarget(copied, urls[1], true);
     await guest.session.start(target.url, { action: 'join', name: 'Guest', code: target.code, microphone: false, captions: false });
     await Promise.all([host.waitFor('connecting'), guest.waitFor('connecting')]);
-    const [answer, offer] = await Promise.all([host.peers[0].remoteApplied, guest.peers[0].remoteApplied]);
+    const [hostPeer, guestPeer] = await Promise.all([host.firstPeer, guest.firstPeer]);
+    const [answer, offer] = await Promise.all([hostPeer.remoteApplied, guestPeer.remoteApplied]);
     expect(answer.type).toBe('answer'); expect(offer.type).toBe('offer');
     expect(guest.session.state.peerName).toBe('Host'); expect(host.session.state.peerName).toBe('Guest');
     expect(guest.session.state.code).toBe(code);
+  });
+
+  it('joins with the same plain code while the host shares it, then exchanges SDP when the host returns', async () => {
+    const host = caller(); const guest = caller();
+    await host.session.start(urls[0], { action: 'create', name: 'Host', microphone: false, captions: false });
+    await host.waitFor('waiting');
+    host.session.setAppActive(false);
+    const target = resolveCallTarget(host.session.state.code, urls[0], true);
+    await guest.session.start(target.url, { action: 'join', name: 'Guest', code: target.code, microphone: false, captions: false });
+    await guest.waitFor('connecting');
+    expect(host.session.state.phase).toBe('waiting');
+    expect(guest.session.state.message).toContain('Waiting for them to return');
+    host.session.setAppActive(true);
+    await host.waitFor('connecting');
+    const [hostPeer, guestPeer] = await Promise.all([host.firstPeer, guest.firstPeer]);
+    const [answer, offer] = await Promise.all([hostPeer.remoteApplied, guestPeer.remoteApplied]);
+    expect(answer.type).toBe('answer'); expect(offer.type).toBe('offer');
+    expect(guest.session.state.code).toBe(host.session.state.code);
   });
 });

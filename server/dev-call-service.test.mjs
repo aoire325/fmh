@@ -41,3 +41,13 @@ test('development startup reports a port conflict instead of silently disabling 
   t.after(() => new Promise((resolve) => other.close(resolve)));
   await assert.rejects(ensureDevCallService({ port: other.address().port }), /occupied by another service/);
 });
+
+test('development startup rejects an older call service that would delete invites during sharing', { timeout: 10000 }, async (t) => {
+  const older = createServer((_request, response) => {
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ ok: true, service: 'signbridge-calls' }));
+  });
+  older.listen(0, '0.0.0.0'); await once(older, 'listening');
+  t.after(() => new Promise((resolve) => older.close(resolve)));
+  await assert.rejects(ensureDevCallService({ port: older.address().port }), /incompatible TalkBridge call service/);
+});

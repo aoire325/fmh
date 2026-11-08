@@ -21,8 +21,8 @@ export function useVideoCall() {
     mounted.current = true;
     const listener = AppState.addEventListener('change', (next) => {
       // Permission prompts may temporarily make iOS inactive. Only background
-      // ends the foreground-only call and releases camera/microphone resources.
-      if (next === 'background') session.current?.end('Call ended when TalkBridge went into the background.');
+      // ends an active call; waiting hosts get a short break to share the invite.
+      if (next === 'background' || next === 'active') session.current?.setAppActive(next === 'active');
     });
     return () => { mounted.current = false; listener.remove(); session.current?.end(); session.current = null; audioModule()?.stopCallAudio?.(); };
   }, []);

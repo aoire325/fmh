@@ -67,7 +67,7 @@ export default function CallScreen() {
     Keyboard.dismiss(); setNotice(''); setTyped(''); setClock(Date.now()); call.start({ action, name, code, microphone, captions });
   };
   const copyInvite = async () => {
-    try { await Clipboard.setStringAsync(createInvite(call.code, call.serviceUrl)); setNotice('Invite copied. Paste the complete invite on the other phone.'); }
+    try { await Clipboard.setStringAsync(createInvite(call.code, call.inviteServiceUrl || call.serviceUrl)); setNotice('Invite copied. Paste the complete invite on the other phone, then return here.'); }
     catch { setNotice('Could not copy. You can select the code below.'); }
   };
   const textComposer = <View style={styles.card}>

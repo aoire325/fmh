@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { WebSocket } from 'ws';
-import { createCallServer, iceConfiguration } from './calls.mjs';
+import { createCallServer, developmentServiceUrl, iceConfiguration } from './calls.mjs';
 
 async function fixture(t, options = {}) {
   const service = createCallServer({ env: {}, ...options });
   service.server.listen(0, '127.0.0.1'); await once(service.server, 'listening');
   t.after(() => service.close());
   const url = `ws://127.0.0.1:${service.server.address().port}/calls`;
-  async function connect() { const socket = new WebSocket(url); await once(socket, 'open'); return socket; }
+  async function connect(options = {}) { const socket = new WebSocket(url, options); await once(socket, 'open'); return socket; }
   return { connect };
 }
 const receive = async (socket) => JSON.parse((await once(socket, 'message'))[0].toString());
@@ -85,4 +85,67 @@ test('distinguishes invalid, missing and full invitations without evicting exist
   reply = receive(extra); send(extra, { type: 'join', name: 'Extra', code }); assert.equal((await reply).code, 'invite_full');
   const offer = receive(guest); send(host, { type: 'description', description: { type: 'offer', sdp: 'v=0' } });
   assert.equal((await offer).type, 'description');
+});
+
+test('sharing an invite keeps the room and waits for the host before negotiating', async (t) => {
+  const { connect } = await fixture(t); const host = await connect(); const guest = await connect();
+  const creation = receive(host); send(host, { type: 'create', name: 'Host' }); const { code } = await creation;
+  send(host, { type: 'presence', active: false });
+  // A ping/pong roundtrip ensures the server processed the host's background
+  // message before the guest joins over a separate socket.
+  const pong = once(host, 'pong'); host.ping(); await pong;
+  const waiting = receive(guest); send(guest, { type: 'join', name: 'Guest', code });
+  assert.equal((await waiting).type, 'waiting_for_host');
+  const hostReady = receive(host); const guestReady = receive(guest);
+  send(host, { type: 'presence', active: true });
+  assert.equal((await hostReady).initiator, true); assert.equal((await guestReady).initiator, false);
+  // Foreground notifications during a connected call must not renegotiate.
+  const messages = []; host.on('message', (raw) => messages.push(JSON.parse(raw)));
+  send(host, { type: 'presence', active: true });
+  const offer = receive(guest); send(host, { type: 'description', description: { type: 'offer', sdp: 'v=0' } });
+  assert.equal((await offer).type, 'description'); assert.equal(messages.length, 0);
+});
+
+test('a host cannot extend the sharing grace indefinitely by repeating background messages', async (t) => {
+  let clock = 0;
+  const { connect } = await fixture(t, { now: () => clock }); const host = await connect(); const guest = await connect();
+  const creation = receive(host); send(host, { type: 'create', name: 'Host' }); const { code } = await creation;
+  send(host, { type: 'presence', active: false });
+  let pong = once(host, 'pong'); host.ping(); await pong;
+  clock = 30000; send(host, { type: 'presence', active: false });
+  pong = once(host, 'pong'); host.ping(); await pong;
+  clock = 60000;
+  const ended = receive(host); send(host, { type: 'presence', active: true });
+  assert.equal((await ended).type, 'ended');
+  const rejected = receive(guest); send(guest, { type: 'join', name: 'Guest', code });
+  assert.equal((await rejected).code, 'invite_not_found');
+});
+
+test('development invites use LAN addresses for USB hosts, and prefer the interface the phone reached', () => {
+  const interfaces = {
+    utun0: [{ address: '10.9.0.2', family: 'IPv4', internal: false }],
+    lo0: [{ address: '127.0.0.1', family: 'IPv4', internal: true }],
+    en0: [{ address: '192.168.1.10', family: 'IPv4', internal: false }],
+  };
+  assert.equal(developmentServiceUrl('127.0.0.1', 8787, interfaces), 'ws://192.168.1.10:8787/calls');
+  assert.equal(developmentServiceUrl('::ffff:127.0.0.1', 8787, interfaces), 'ws://192.168.1.10:8787/calls');
+  assert.equal(developmentServiceUrl('10.9.0.2', 8787, interfaces), 'ws://10.9.0.2:8787/calls');
+  assert.equal(developmentServiceUrl('127.0.0.1', 8787, {}), undefined);
+});
+
+test('a suspended waiting host survives heartbeat checks during the sharing grace period', async (t) => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  let clock = 0;
+  const { connect } = await fixture(t, { now: () => clock });
+  const host = await connect({ autoPong: false });
+  const creation = receive(host); send(host, { type: 'create', name: 'Host' }); const { code } = await creation;
+  send(host, { type: 'presence', active: false });
+  const pong = once(host, 'pong'); host.ping(); await pong;
+  clock = 45000; t.mock.timers.tick(45000);
+  const guest = await connect(); const waiting = receive(guest);
+  send(guest, { type: 'join', name: 'Guest', code });
+  assert.equal((await waiting).type, 'waiting_for_host');
+  const hostReady = receive(host); const guestReady = receive(guest);
+  send(host, { type: 'presence', active: true });
+  assert.equal((await hostReady).type, 'ready'); assert.equal((await guestReady).type, 'ready');
 });

@@ -21,6 +21,9 @@ both connections immediately and opens the installed app.
    a different default service still joins the host's room. Manually entering the
    12-character code remains supported when both phones use the same call service.
    The invitation admits one guest and expires after 15 minutes of waiting.
+   The waiting host can switch apps for up to one minute to share the invite;
+   camera and microphone capture pause during this break. Return to TalkBridge
+   to connect. A guest who joins during the break waits for the host to return.
 3. Each video tile has a caption strip immediately below it. Only the sender's
    own caption appears below that sender's video on both phones.
 4. AI captions start processing your camera as soon as it is available, including
@@ -44,7 +47,8 @@ both connections immediately and opens the installed app.
    access. **Hear guest's AI voice** mutes incoming speech and **Stop voice** cancels
    queued speech. See [voice setup](voice.md#speak-in-a-meeting).
 7. End call releases tracks, the peer connection, signaling, captions, and speech.
-   Leaving the screen or backgrounding the app also ends this first-version call.
+   Leaving the screen or backgrounding an active call also ends this first-version
+   call. Waiting invitations have the one-minute sharing break described above.
 
 ### Focus call view
 
@@ -83,6 +87,9 @@ command exits. A second command reuses a running TalkBridge service and preserve
 its waiting invitations. An unrelated service on port 8787 causes a clear startup
 error. `npm run calls:server` remains available for running signaling separately;
 start it first if you need invitations to survive restarting Metro.
+Startup rejects an older, incompatible TalkBridge call service rather than
+silently reusing it. Stop that older development command and restart this project
+to load the updated signaling protocol; create fresh invitations after restarting.
 For local development, both phones automatically use the call service on port
 8787 of the computer serving their Expo project when no explicit service is set.
 Open the same Mac's LAN development server on both phones and reload both apps
@@ -99,9 +106,11 @@ EXPO_PUBLIC_CALL_SIGNAL_URL=ws://YOUR_COMPUTER_LAN_IP:8787/calls
 ```
 
 Both phones must be able to reach that computer. Use its LAN IP, not localhost.
-Copied invitations must point to an address reachable by the guest; a USB-only
-localhost address cannot be reached from another phone. Keep both apps open
-while entering or pasting the invite.
+Copied invitations must point to an address reachable by the guest. For a host
+connected through Android USB loopback, the development service now supplies the
+computer's LAN address for the copied invite. Both phones must be able to reach
+that LAN address; USB forwarding alone does not give the guest network access.
+Keep both apps open during the call, and return within one minute after sharing.
 An explicit service address takes priority over automatic development discovery.
 Discovery is limited to local development hosts; Expo tunnels do not expose port
 8787. Production builds still require a configured WSS endpoint.
@@ -150,6 +159,11 @@ verified identities. Do not publish invitation codes.
 
 - `src/calls/call-session.ts` owns media, SDP negotiation, buffered ICE candidates,
   the data channel, timeouts, and teardown. Generation checks reject late results.
+  The host offers an audio transceiver even when muted. The guest applies the
+  offer before attaching its microphone to that offered transceiver, so starting
+  muted and later unmuting sends audio in either direction without renegotiation.
+  A waiting host's bounded background break pauses capture and delays negotiation
+  until the host returns, instead of deleting the room while sharing the invite.
 - `server/calls.mjs` pairs two clients and relays connection metadata. It does not
   accept captions, store media, or log SDP and room codes.
 - `src/calls/protocol.ts` validates bounded caption messages and their source labels.
@@ -189,3 +203,15 @@ reviewed and automatic captions, sentence cancellation, personal signs, typed
 corrections, large text, network interruption, backgrounding, and hang-up.
 Measure signer-diverse recognition accuracy and call latency separately. Unit
 tests and a successful native build do not establish live recognition accuracy.
+
+Call-fix validation on November 7, 2026: all 308 app tests, 16 signaling/development
+service tests, lint, and typecheck passed. The real Android host's switch to the
+home screen preserved its invitation, and the native iOS simulator guest received
+the waiting-for-host state. Two real native WebRTC peers on the Android phone
+connected from a muted start, enabled their microphones, and each sent and received
+more than 120 audio RTP packets, with audio negotiated as sendrecv on both peers.
+This was a same-device transport check, not a two-phone listening test.
+The simulator then aborted in CoreAudio's remote I/O
+initialization during negotiation, so this check did not establish two-way audio
+on a physical Android/iPhone pair. Use two physical phones for final audio and
+speaker verification, with both microphones enabled.

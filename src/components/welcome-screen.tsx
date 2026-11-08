@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { InformationBar } from '@/components/information-bar';
 import { MeetingPlanner } from '@/components/meeting-planner';
 import { BrandFooter } from '@/components/brand-footer';
+import { colors } from '@/constants/palette';
 
 export function WelcomeScreen({ onOpenCalls }: { onOpenCalls?: () => void }) {
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -40,7 +41,7 @@ export function WelcomeScreen({ onOpenCalls }: { onOpenCalls?: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#E5F2E8' }, scroll: { flex: 1 },
+  screen: { flex: 1, backgroundColor: colors.canvas }, scroll: { flex: 1 },
   content: { flexGrow: 1 }, body: { alignItems: 'center', padding: 20 },
   planner: { width: '100%', maxWidth: 760, paddingVertical: 16 },
 });

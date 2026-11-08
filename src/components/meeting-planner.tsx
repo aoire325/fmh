@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { dayKey, meetingTime, parseMeetings, weekDays, type ScheduledMeeting } from '@/calls/meeting-schedule';
 import { parseInvite } from '@/calls/protocol';
+import { colors } from '@/constants/palette';
 
 const calendarFile = () => new File(Paths.document, 'talkbridge-meetings-v1.json');
 const dateLabel = (date: Date) => date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
@@ -95,7 +96,7 @@ export function MeetingPlanner({ onInstantMeeting, onCodeFocus, onCodeBlur }: {
             style={({ pressed }) => [styles.day, active && styles.darkButton, pressed && styles.pressed, focusedDay === dayKey(date) && styles.focused]}>
             <Text style={[styles.body, active && styles.white]}>{date.toLocaleDateString(undefined, { weekday: 'short' })}</Text>
             <Text style={[styles.dayNumber, active && styles.white]}>{date.getDate()}</Text>
-            <Text style={[styles.body, active && styles.white]}>{count ? `• ${count}` : '·'}</Text>
+            <View style={styles.dateSpacer} />
           </Pressable>;
         })}
       </ScrollView>
@@ -115,7 +116,7 @@ export function MeetingPlanner({ onInstantMeeting, onCodeFocus, onCodeBlur }: {
     </View>
     <View ref={codeAreaRef} collapsable={false} style={styles.joinRow}>
       <View style={styles.joinBox}>
-        <TextInput accessibilityLabel="Meeting code" placeholder="Enter code or paste invite" placeholderTextColor="#456452" value={code} onChangeText={setCode}
+        <TextInput accessibilityLabel="Meeting code" placeholder="Enter code or paste invite" placeholderTextColor={colors.inkSoft} value={code} onChangeText={setCode}
           autoCapitalize="none" autoCorrect={false} maxLength={2048} returnKeyType="go" onSubmitEditing={join}
           onFocus={() => { if (codeAreaRef.current) onCodeFocus?.(codeAreaRef.current); }} onBlur={onCodeBlur} style={styles.input} />
         <Button label="Join" dark onPress={join} disabled={!code.trim()} />
@@ -129,9 +130,9 @@ export function MeetingPlanner({ onInstantMeeting, onCodeFocus, onCodeBlur }: {
     {editing ? <View style={styles.calendar}>
       <Text accessibilityRole="header" style={styles.title}>Create a Meeting for Later</Text>
       <Text style={styles.body}>{dateLabel(selected)} · Select another day in the calendar to change the date.</Text>
-      <TextInput accessibilityLabel="Meeting title" placeholder="Meeting title" placeholderTextColor="#456452" value={title} onChangeText={setTitle} maxLength={80} style={styles.input} />
+      <TextInput accessibilityLabel="Meeting title" placeholder="Meeting title" placeholderTextColor={colors.inkSoft} value={title} onChangeText={setTitle} maxLength={80} style={styles.input} />
       <Text style={styles.body}>Local time (24-hour format)</Text>
-      <TextInput accessibilityLabel="Meeting time" placeholder="HH:MM" placeholderTextColor="#456452" value={time} onChangeText={setTime} maxLength={5} keyboardType="numbers-and-punctuation" style={styles.input} />
+      <TextInput accessibilityLabel="Meeting time" placeholder="HH:MM" placeholderTextColor={colors.inkSoft} value={time} onChangeText={setTime} maxLength={5} keyboardType="numbers-and-punctuation" style={styles.input} />
       <View style={styles.row}><Button label="Save meeting" dark disabled={!ready} onPress={save} /><Button label="Cancel scheduling" onPress={() => { setEditing(false); setError(''); }} /></View>
     </View> : null}
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
@@ -140,19 +141,19 @@ export function MeetingPlanner({ onInstantMeeting, onCodeFocus, onCodeBlur }: {
 }
 
 const styles = StyleSheet.create({
-  planner: { width: '100%', gap: 14 }, calendar: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 18, gap: 14, borderWidth: 1, borderColor: '#B7D5C0' },
-  empty: { gap: 6 }, hint: { fontSize: 12, lineHeight: 18, color: '#456452' },
+  planner: { width: '100%', gap: 14 }, calendar: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 18, gap: 14, borderWidth: 1, borderColor: colors.line },
+  empty: { gap: 6 }, hint: { fontSize: 12, lineHeight: 18, color: colors.inkSoft },
   row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  title: { fontSize: 22, fontWeight: '800', color: '#163D2A' }, body: { fontSize: 14, lineHeight: 21, color: '#456452' },
+  title: { fontSize: 22, fontWeight: '800', color: colors.navy }, body: { fontSize: 14, lineHeight: 21, color: colors.inkSoft },
   days: { flexGrow: 1, justifyContent: 'space-between', gap: 6 },
-  day: { minWidth: 50, minHeight: 92, borderRadius: 16, padding: 8, alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#EDF6EF' },
-  dayNumber: { color: '#163D2A', fontSize: 22, fontWeight: '700' }, dayTitle: { color: '#163D2A', fontSize: 16, fontWeight: '700' },
-  meeting: { borderTopWidth: 1, borderColor: '#B7D5C0', paddingTop: 12, gap: 8 },
-  button: { minWidth: 48, minHeight: 48, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: '#EDF6EF', justifyContent: 'center', alignItems: 'center', flexShrink: 1 },
-  darkButton: { backgroundColor: '#237449' }, buttonText: { color: '#163D2A', fontSize: 14, fontWeight: '700', textAlign: 'center' }, white: { color: '#FFFFFF' },
-  pressed: { opacity: 0.75 }, disabled: { opacity: 0.45 }, focused: { outlineWidth: 2, outlineColor: '#163D2A', outlineOffset: 2 },
+  day: { minWidth: 50, minHeight: 92, borderRadius: 16, padding: 8, alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: colors.mintSoft },
+  dayNumber: { color: colors.navy, fontSize: 22, fontWeight: '700' }, dayTitle: { color: colors.navy, fontSize: 16, fontWeight: '700' }, dateSpacer: { height: 21 },
+  meeting: { borderTopWidth: 1, borderColor: colors.line, paddingTop: 12, gap: 8 },
+  button: { minWidth: 48, minHeight: 48, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: colors.mintSoft, justifyContent: 'center', alignItems: 'center', flexShrink: 1 },
+  darkButton: { backgroundColor: colors.teal }, buttonText: { color: colors.navy, fontSize: 14, fontWeight: '700', textAlign: 'center' }, white: { color: '#FFFFFF' },
+  pressed: { opacity: 0.75 }, disabled: { opacity: 0.45 }, focused: { outlineWidth: 2, outlineColor: colors.tealDeep, outlineOffset: 2 },
   joinRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 }, joinBox: { flex: 1, minWidth: 220, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  input: { flexGrow: 1, minWidth: 120, minHeight: 50, borderWidth: 1, borderColor: '#B7D5C0', borderRadius: 12, padding: 12, backgroundColor: '#FFFFFF', fontSize: 16, color: '#163D2A' },
-  menu: { alignSelf: 'flex-end', maxWidth: '100%', padding: 8, backgroundColor: '#FFFFFF', borderRadius: 16, gap: 6, borderWidth: 1, borderColor: '#B7D5C0' },
+  input: { flexGrow: 1, minWidth: 120, minHeight: 50, borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 12, backgroundColor: '#FFFFFF', fontSize: 16, color: colors.navy },
+  menu: { alignSelf: 'flex-end', maxWidth: '100%', padding: 8, backgroundColor: '#FFFFFF', borderRadius: 16, gap: 6, borderWidth: 1, borderColor: colors.line },
   error: { color: '#9B302C', fontSize: 14, lineHeight: 21 },
 });

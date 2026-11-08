@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVideoCall } from '@/calls/use-video-call';
-import { CAPTION_LIMIT, createInvite, displayInvite, parseInvite } from '@/calls/protocol';
+import { CAPTION_LIMIT, createInvite, displayInvite } from '@/calls/protocol';
 import { CallVideoTile } from '@/components/call-video-tile';
 import { CallCaptionComposer, type CallCaptionFeedback } from '@/components/call-caption-composer';
 import { colors } from '@/constants/palette';
@@ -13,6 +13,7 @@ import { CallIconButton } from '@/components/call-icon-button';
 import { StatusBar } from 'expo-status-bar';
 import { useMeetingVoice } from '@/calls/use-meeting-voice';
 import { MeetingVoiceControls } from '@/components/meeting-voice-controls';
+import { InformationBar } from '@/components/information-bar';
 
 function KeepCallAwake() { useKeepAwake('signbridge-call', { suppressDeactivateWarnings: true }); return null; }
 
@@ -29,15 +30,7 @@ function CallButton({ title, subtitle, onPress, disabled, danger, dark }: {
 export default function CallScreen() {
   const call = useVideoCall();
   const meetingVoice = useMeetingVoice(call);
-  const params = useLocalSearchParams<{ code?: string; service?: string }>();
-  const incomingInvite = typeof params.code === 'string'
-    ? typeof params.service === 'string'
-      ? `signbridge:///call?code=${encodeURIComponent(params.code)}&service=${encodeURIComponent(params.service)}`
-      : params.code : '';
-  const [previousInvite, setPreviousInvite] = useState(incomingInvite);
   const [name, setName] = useState('');
-  const [code, setCode] = useState(() => parseInvite(incomingInvite) ? incomingInvite : '');
-  const [joining, setJoining] = useState(() => !!parseInvite(incomingInvite));
   const [microphone, setMicrophone] = useState(false);
   const [captions, setCaptions] = useState(true);
   const [typed, setTyped] = useState('');
@@ -53,18 +46,12 @@ export default function CallScreen() {
   const focusedCall = inCall && focusMode;
   const canSend = connected && call.channelReady;
   const elapsed = call.startedAt ? Math.max(0, Math.floor((clock - call.startedAt) / 1000)) : 0;
-  // A new link can target an already mounted lobby. Apply it before rendering
-  // the entry form, while leaving an ongoing call and its camera untouched.
-  if (!inCall && incomingInvite !== previousInvite) {
-    setPreviousInvite(incomingInvite);
-    if (parseInvite(incomingInvite)) { setCode(incomingInvite); setJoining(true); }
-  }
   useEffect(() => {
     if (!call.startedAt || !inCall) return;
     const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer);
   }, [call.startedAt, inCall]);
   const start = (action: 'create' | 'join') => {
-    Keyboard.dismiss(); setNotice(''); setTyped(''); setClock(Date.now()); call.start({ action, name, code, microphone, captions });
+    Keyboard.dismiss(); setNotice(''); setTyped(''); setClock(Date.now()); call.start({ action, name, code: '', microphone, captions });
   };
   const copyInvite = async () => {
     try { await Clipboard.setStringAsync(createInvite(call.code, call.inviteServiceUrl || call.serviceUrl)); setNotice('Invite copied. Paste the complete invite on the other phone, then return here.'); }
@@ -90,6 +77,7 @@ export default function CallScreen() {
   return <SafeAreaView style={[styles.screen, focusedCall && styles.focusScreen]} edges={['top', 'bottom']}>
     <StatusBar style={focusedCall ? 'light' : 'dark'} />
     {inCall ? <KeepCallAwake /> : null}
+    {!inCall ? <InformationBar page="call" /> : null}
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={!focusedCall}
         contentContainerStyle={[styles.content, wide && styles.wideContent, focusedCall && styles.focusContent,
@@ -102,7 +90,7 @@ export default function CallScreen() {
           <CallIconButton label={videoLayout === 'both' ? 'Enlarge guest video' : videoLayout === 'guest' ? 'Enlarge my video' : 'Show both videos'}
             icon={{ ios: 'rectangle.2.swap', android: 'view_agenda', web: 'view_agenda' }}
             onPress={() => setVideoLayout(videoLayout === 'both' ? 'guest' : videoLayout === 'guest' ? 'me' : 'both')} />
-        </View> : <View style={styles.topBar}>
+        </View> : inCall ? <View style={styles.topBar}>
           <Pressable accessibilityRole="button" accessibilityLabel={inCall ? 'Leave call and go home' : 'Back to home'}
             onPress={() => { call.end(); if (router.canGoBack()) router.back(); else router.replace('/'); }} style={styles.back}>
             <Text style={styles.backText}>‹</Text>
@@ -110,15 +98,9 @@ export default function CallScreen() {
           <View style={styles.flex}><Text style={styles.brand}>SIGNBRIDGE</Text><Text style={styles.topTitle}>Conversations</Text></View>
           <View style={styles.statusPill}><View style={[styles.statusDot, connected && styles.liveDot]} />
             <Text style={styles.statusText}>{connected ? `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}` : inCall ? 'Connecting' : 'ONE TO ONE'}</Text></View>
-        </View>}
+        </View> : null}
 
         {!inCall ? <>
-          <View style={styles.intro}><Text style={styles.eyebrow}>YOUR PEOPLE. YOUR WAY TO TALK.</Text>
-            <Text accessibilityRole="header" style={styles.hero}>See each other.{'\n'}Understand more.</Text>
-            <Text style={styles.description}>A space to sign, speak, or type. Turn on AI sign captions to share words beneath your video.</Text></View>
-          {call.message ? <View style={styles.notice} accessibilityRole={call.phase === 'error' ? 'alert' : undefined}>
-            <Text style={styles.noticeTitle}>{call.phase === 'error' ? 'We couldn’t start this call' : 'Your call has ended'}</Text>
-            <Text style={styles.body}>{call.message}</Text></View> : null}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Before you join</Text>
             <Text style={styles.label}>Your name</Text>
@@ -137,16 +119,11 @@ export default function CallScreen() {
               <Switch accessibilityLabel="Start in focus call view" value={focusMode} onValueChange={setFocusMode} trackColor={{ false: colors.line, true: colors.teal }} /></View>
           </View>
           <View style={styles.startActions}>
-            <CallButton title="Start a new call" subtitle="Create a private invitation" dark disabled={!name.trim()} onPress={() => start('create')} />
-            <CallButton title={joining ? 'Hide invite entry' : 'Join with a code'} subtitle="Meet someone who invited you" onPress={() => setJoining(!joining)} />
+            <CallButton title="Create a new call" subtitle="Create a private invitation" dark disabled={!name.trim()} onPress={() => start('create')} />
           </View>
-          {joining ? <View style={styles.card}>
-            <Text style={styles.cardTitle}>Have an invitation?</Text>
-            <Text style={styles.body}>Paste the complete invite from the host, or enter the 12-character code.</Text>
-            <TextInput accessibilityLabel="Call invite code" value={code} onChangeText={setCode} placeholder="Paste invite or enter code" placeholderTextColor={colors.inkSoft}
-              autoCapitalize="none" autoCorrect={false} maxLength={2048} style={styles.input} />
-            <CallButton title="Join call" dark disabled={!name.trim() || !parseInvite(code)} onPress={() => start('join')} />
-          </View> : null}
+          {call.message ? <View style={styles.notice} accessibilityRole={call.phase === 'error' ? 'alert' : undefined}>
+            <Text style={styles.noticeTitle}>{call.phase === 'error' ? 'We couldn’t start this call' : 'Your call has ended'}</Text>
+            <Text style={styles.body}>{call.message}</Text></View> : null}
           <Text style={styles.footnote}>Calls share your live video and any enabled audio with your guest. Only captions you share are sent. AI recognition is experimental and can miss or change meaning.</Text>
         </> : <>
           {!focusedCall ? <View accessibilityLiveRegion="polite" style={styles.callHeading}><Text style={styles.callTitle}>{call.phase === 'waiting' ? 'Your invitation is ready.' : connected ? `You + ${call.peerName}` : 'Bringing you together…'}</Text>

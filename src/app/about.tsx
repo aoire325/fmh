@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { InformationBar } from '@/components/information-bar';
 import { BrandFooter } from '@/components/brand-footer';
+import { colors } from '@/constants/palette';
 
 const values = [
   ['Inclusivity', 'Everyone deserves equal opportunities to communicate.'],
@@ -37,13 +38,13 @@ export default function AboutScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#E5F2E8' }, scroll: { flex: 1 },
+  screen: { flex: 1, backgroundColor: colors.canvas }, scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   content: { width: '100%', maxWidth: 860, alignSelf: 'center', padding: 24, gap: 22, paddingBottom: 40 },
-  title: { color: '#163D2A', fontSize: 36, fontWeight: '800', letterSpacing: -1, marginVertical: 10 },
-  heading: { color: '#237449', fontSize: 23, fontWeight: '700' },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 22, padding: 22, gap: 12, borderWidth: 1, borderColor: '#B7D5C0' },
-  body: { color: '#456452', fontSize: 16, lineHeight: 27 },
+  title: { color: colors.navy, fontSize: 36, fontWeight: '800', letterSpacing: -1, marginVertical: 10 },
+  heading: { color: colors.teal, fontSize: 23, fontWeight: '700' },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 22, padding: 22, gap: 12, borderWidth: 1, borderColor: colors.line },
+  body: { color: colors.inkSoft, fontSize: 16, lineHeight: 27 },
   values: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 }, value: { flexGrow: 1, flexBasis: 280 },
-  valueName: { color: '#163D2A', fontWeight: '800' },
+  valueName: { color: colors.navy, fontWeight: '800' },
 });

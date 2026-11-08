@@ -6,5 +6,5 @@ export function TalkBridgeWordmark() {
 
 const styles = StyleSheet.create({
   brand: { maxWidth: '100%', fontSize: 24, fontWeight: '800', letterSpacing: -0.8 },
-  talk: { color: '#A8D67F' }, bridge: { color: '#FFFFFF' },
+  talk: { color: '#B9DEED' }, bridge: { color: '#FFFFFF' },
 });

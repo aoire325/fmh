@@ -1,0 +1,88 @@
+Generated with the built-in image_gen tool.
+
+Homepage, iOS icon, and splash: signbridge-logo.png
+Android padded adaptive foreground: signbridge-logo-adaptive.png
+
+Current open-palm trunk revision:
+The central dark green trunk ends in a normal open palm with all five fingers
+extended. The thirteen green branch hands retain their ASL poses.
+
+Main logo edit prompt:
+Use case: precise-object-edit
+Input image is the current SignBridge tree logo. Make a very localized change ONLY to the large DARK FOREST-GREEN HAND in the CENTER, at the top of the trunk.
+Replace that central I-love-you signing pose with a normal, relaxed OPEN PALM: all five fingers extended naturally upward/outward, four long fingers with the middle finger tallest, thumb angled to the left, gently spread fingers with smooth rounded tips. It is an ordinary open human hand with five anatomical digits. Extend the previously folded middle and ring fingers. Remove the curled-finger contour lines inside this central hand. Keep this central palm and its existing forearm trunk DARK forest green #163D2A, darker than the branches, preserving the existing pale outline separating it from the canopy.
+Preserve EVERYTHING outside this central dark hand exactly: all thirteen green branch hands with their existing R, C, U and I-love-you sign language poses, connected branching arms, positions, text "Resilience • Connection • Understanding" curved above, text spelling, light-green background, colors, trunk base, square composition, margins and image scale. The small GREEN I-love-you hand at the very TOP stays as it is. ONLY the large DARK CENTRAL hand changes into an open palm. Do not add or remove branches or change branch gestures. Crisp vector-style artwork, opaque square PNG.
+This is the full-size homepage and iOS logo. Preserve its original framing and margin sizes.
+
+Android padded logo edit prompt:
+Use case: precise-object-edit
+Input image is the current SignBridge tree logo. Make a very localized change ONLY to the large DARK FOREST-GREEN HAND in the CENTER, at the top of the trunk.
+Replace that central I-love-you signing pose with a normal, relaxed OPEN PALM: all five fingers extended naturally upward/outward, four long fingers with the middle finger tallest, thumb angled to the left, gently spread fingers with smooth rounded tips. It is an ordinary open human hand with five anatomical digits. Extend the previously folded middle and ring fingers. Remove the curled-finger contour lines inside this central hand. Keep this central palm and its existing forearm trunk DARK forest green #163D2A, darker than the branches, preserving the existing pale outline separating it from the canopy.
+Preserve EVERYTHING outside this central dark hand exactly: all thirteen green branch hands with their existing R, C, U and I-love-you sign language poses, connected branching arms, positions, text "Resilience • Connection • Understanding" curved above, text spelling, light-green background, colors, trunk base, square composition, margins and image scale. The small GREEN I-love-you hand at the very TOP stays as it is. ONLY the large DARK CENTRAL hand changes into an open palm. Do not add or remove branches or change branch gestures. Crisp vector-style artwork, opaque square PNG.
+This is the already padded Android launcher icon. Preserve the existing smaller artwork size and generous empty pale-green outer margins exactly.
+
+Previous fuller-tree revision:
+Thirteen green hand-tipped branches, six on each side and one at the top,
+plus the darker central forearm and ILY hand. Six additional branches.
+
+Main logo edit prompt:
+Use case: precise-object-edit
+Asset type: SignBridge logo, fuller ASL hand-tree revision.
+Input image: edit target, the existing green ASL hand-tree logo.
+
+Primary change: ADD SIX MORE GREEN HAND-TIPPED BRANCHES, three on each side, so the canopy becomes noticeably fuller and more tree-like. There should be THIRTEEN green branch-tip hands total: six on the left, six on the right, one at top center. The existing dark-green central trunk hand remains in addition to these thirteen. Add branching forks off the existing main limbs; make a full, rounded, airy tree crown, not a stack of disconnected hands. Keep clear pale-green negative space between all hands, wrists and branches.
+
+Every branch must still end in a recognizable ASL handshape, never a generic open palm. Reuse the existing source hand poses, twice per side: two crossed-finger R hands, two curved C hands, two U hands with joined upright index/middle fingers. Alternate these on six tiers of curved branching forearms on each side. The top center hand and the dark-green central forearm's hand retain the ASL I-LOVE-YOU pose: thumb, index and little finger extended; middle and ring folded. Reproduce these established poses and their delicate pale-green finger contour lines faithfully. Exactly five anatomical digits per hand. Scale hands slightly smaller than in the input to fit the extra six while keeping each sign legible. Left and right sides balanced, organic branching in multiple directions, stems clearly join into the same tree.
+
+Invariants: preserve the solid light-green background #E5F2E8; dark forest-green central arm trunk #163D2A, distinctly darker than the branch greens; exact curved heading "Resilience • Connection • Understanding"; original clean flat vector-like style, tree identity, base of trunk, and square layout with generous outer margins. Keep the canopy below and inside the text arch, with no overlaps or cut-off text. No additional wording, no extra symbols, no labels, no arrows, no texture or shadows. Opaque square PNG.
+
+Android padded variant edit prompt:
+Use case: precise-object-edit
+Input image is the final SignBridge ASL tree logo with thirteen green branch-tip hands and the dark central arm hand.
+Create its Android launcher safe-area version. Change ONLY the scale and outer padding: fit the complete existing design, including the curved text and every branch, into the central 60% width and 60% height of a square canvas. Add at least 20% empty pale-green margin on each of the four sides. The background stays opaque solid light green #E5F2E8.
+Preserve the artwork exactly: all THIRTEEN green branch-tip hands, six on each side and one top center; the darker forest-green forearm trunk and central I-love-you hand; the R crossed-finger, C curved, U joined-finger, and I-love-you handshapes; pale finger contour lines; the connected branching tree; exact heading "Resilience • Connection • Understanding" curved above the canopy. Do not remove any branch, simplify hand poses, add digits, add symbols, or change text. Crisp flat vector-style artwork, smooth solid colors, no noise, texture or shadow. Opaque square PNG.
+
+Previous ASL revision:
+R, C, and U are fingerspelled initials of Resilience, Connection, and Understanding.
+The ILY handshape represents I love you. These are symbolic logo handshapes.
+
+Handshape references:
+https://www.lifeprint.com/asl101/fingerspelling/abc-fingerspelling-charts.htm
+https://www.lifeprint.com/asl101/topics/ily.htm
+
+Previous main logo edit prompt:
+Use case: precise-object-edit
+Asset type: revised SignBridge tree logo for homepage and app icon.
+Input image: edit target, the current green hand-tree logo. Preserve its light green background (#E5F2E8), distinctly darker forest-green forearm trunk (#163D2A), medium green branch arms, overall organic tree silhouette, and exact curved heading "Resilience • Connection • Understanding".
+
+Change ONLY the hand poses so the tree is made of recognizable American Sign Language handshapes rather than generic open hands. Keep the overall elegant tree arrangement with branching forearms in several directions.
+Use these handshapes, anatomically correct with exactly five digits per hand, curled fingers visible through a few pale-green negative-space contour lines:
+- Upper left and upper right branch tips: ASL R, index and middle fingers raised and visibly CROSSED over each other, ring and little fingers folded into the palm, thumb resting across folded fingers. Two raised crossed fingers, no spread fan of fingers.
+- Middle left and middle right branch tips: ASL C, four fingers curved together forming the upper arc of a clear open C shape, thumb curved underneath forming the lower arc, obvious open space between fingertips and thumb. Side-facing hand so the C is easy to recognize.
+- Lower left and lower right branch tips: ASL U, ONLY index and middle fingers held straight TOGETHER touching side by side, ring and little fingers folded into the palm with thumb holding them. Two joined raised fingers, not a V or peace sign.
+- Top center branch tip AND dark-green central trunk's hand: the ASL I-LOVE-YOU handshape, palm facing viewer, thumb extended outward sideways, index finger upright, pinky upright, middle and ring fingers folded into palm. Show the two folded fingers with subtle negative-space curved lines. It must have an extended thumb, not the horns hand gesture.
+Each hand grows naturally from its branch wrist; no floating hands. Preserve text wording, green palette, trunk darkness, tree height, and generous margins. Adjust branch curves minimally as needed so handshapes remain legible and the canopy balanced. Clean flat vector-style graphic, bold silhouette, smooth edges, no photographic skin, no extra symbols, no labels on branches, no arrows, no extra wording. This is symbolic ASL fingerspelling for initials R C U, not literal signs for whole words.
+Square opaque PNG, light green background.
+
+Previous Android padded variant edit prompt:
+Use case: precise-object-edit
+Input image is the final SignBridge ASL tree logo. Create a safe padded version for Android launcher icons.
+Change ONLY the scale and outer margins: reduce the complete artwork including every word to fit within the central 60% width and height of a square canvas, with at least 20% empty margin on every side. Fill all margins with the same opaque light-green background #E5F2E8.
+Preserve the source artwork exactly: upper pair of ASL R crossed-finger hands, middle pair of C curved hands, lower pair of U two-joined-finger hands, top and dark central I-LOVE-YOU hands with index/pinky/thumb extended and middle/ring folded. Keep all finger contour lines and the darker green arm trunk. Preserve the exact curved text "Resilience • Connection • Understanding". Do not redesign, change hand poses, change text, add fingers, remove fingers, or add elements. Clean vector-style lines, solid greens, no texture, noise, shadows or gradients. Opaque square PNG.
+
+Previous version prompts, retained for design history:
+
+Original open-hand logo prompt:
+Use case: logo-brand
+Asset type: final square logo for SignBridge, an accessible sign-language communication mobile app.
+Create one polished, flat vector-style logo on a solid very light green background (#E5F2E8).
+Central symbol: a tree whose canopy consists of open human hands spreading in multiple directions like branches. The main trunk is an upright human forearm, visually merging naturally into the branching hands. The forearm trunk MUST be a distinctly darker forest green (#163D2A) than the medium green branches and hands (#348B55 and #5AA76B). Make the silhouette elegantly legible as both a tree and hands, with clean organic curves, restrained detail, and balanced negative space.
+Above the tree, set these three core values exactly once in a single gracefully curved arch following the round top of the canopy: "Resilience • Connection • Understanding". Use readable dark forest-green lettering, generous spacing, clean rounded sans-serif, perfect spelling, upright letterforms rotating along the arch. The whole sentence reads left to right. No other text.
+Composition: centered square 1024x1024, all text and symbol comfortably inside the middle 80% with generous light green margins; tree fills the central area below the curved text. Flat solid colors, sharp edges, no gradients, no shadows, no mockup, no photographic texture, no additional badges or borders. The hands must be recognizable with clean fingers, forming the tree canopy rather than surrounding a conventional leafy tree.
+
+Adaptive variant prompt:
+Preserve the logo exactly, including the curved words, hand-shaped branches,
+dark green forearm trunk, and light green background. Scale the complete logo
+into the central 60% of a square canvas with 20% pale green margins on each side.
+Use an opaque light green background (#E5F2E8), clean flat shapes and smooth edges.
+No added text, texture, stray dots, noise, shadows, or gradients.

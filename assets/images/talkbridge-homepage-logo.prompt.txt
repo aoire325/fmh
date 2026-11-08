@@ -1,0 +1,12 @@
+Tool: built-in image_gen.
+Output: assets/images/talkbridge-homepage-logo.png
+Source: user's Photo 1.jpg, supplied on 2026-11-07.
+
+Final edit prompt:
+Use case: precise-object-edit
+Asset type: production homepage logo restored from the attached photo.
+Input image is the edit target. Faithfully redraw the flat logo shown INSIDE the photographed white screen panel as a crisp, upright digital asset. Preserve the same central branching tree with a canopy of pointed oval leaves, alternating medium green and light yellow-green leaves with simple vein cutouts. Preserve the two hands below the tree canopy: the I-love-you hand on the left and the open palm angled outward on the right. Preserve the arched bridge with two supports and the small video-camera silhouette underneath its center, plus the green curved ground shapes at its base. Keep the exact relative proportions, hand poses, leaf arrangement, bridge design and camera icon in the photo.
+
+Use a completely SOLID OPAQUE very light green background #E5F2E8, including all negative spaces between shapes and the leaf vein cutouts. Use clean solid fills: forest green #2E6A47 for trunk, hands, bridge and camera; medium green #548D54 and lighter yellow-green #8BB743 for the leaves, matching the reference.
+The photographed room, reflections, monitor, white rectangle, perspective distortion, screen moire and texture must be absent. No transparency. No gradients, shading, noise, stray dots, borders or shadows. NO added text or letters. The TalkBridge name is rendered separately in the app.
+Landscape 4:3 composition, logo centered and fully visible with a small balanced margin. Smooth solid vector-like shapes and immaculate edges. Keep faithful to the supplied logo.

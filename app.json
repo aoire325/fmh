@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "TalkBridge",
+    "slug": "signbridge-asl",
+    "version": "1.1.0",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "orientation": "portrait",
+    "icon": "./assets/images/talkbridge-icon.png",
+    "scheme": "signbridge",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.signbridge.asl",
+      "icon": "./assets/images/talkbridge-icon.png"
+    },
+    "android": {
+      "package": "com.signbridge.asl",
+      "icon": "./assets/images/talkbridge-icon.png",
+      "adaptiveIcon": {
+        "backgroundColor": "#237449",
+        "foregroundImage": "./assets/images/talkbridge-icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "./plugins/with-ios-dev-launcher-script-warning",
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TalkBridge uses the camera to show your signing during a session.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#E5F2E8",
+          "image": "./assets/images/signbridge-logo.png",
+          "imageWidth": 220
+        }
+      ],
+      "expo-asset",
+      "./plugins/with-ios-tflite-isolation",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "TalkBridge uses your camera for signing and video calls.",
+          "microphonePermission": "TalkBridge uses your microphone only when you enable audio in a call."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "recordAudioAndroid": false,
+          "microphonePermission": "TalkBridge uses your microphone only when you enable audio in a call.",
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

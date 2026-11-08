@@ -1,0 +1,22 @@
+export const colors = {
+  canvas: '#D9EEF5',
+  accent: '#B9DEED',
+  yellow: '#F7CE46',
+  sky: '#D9EEF5',
+  white: '#FFFFFF',
+  navy: '#162631',
+  ink: '#1B2A31',
+  inkSoft: '#4B6574',
+  inkMuted: '#526E7D',
+  line: '#B5CEDA',
+  field: '#F2F8FB',
+  teal: '#2A6985',
+  tealDeep: '#204E65',
+  mint: '#B5DAEB',
+  mintSoft: '#E8F4FA',
+  warmCard: '#EFF7FB',
+  ochre: '#204E65',
+  danger: '#A84E46',
+  dangerSoft: '#F8ECE9',
+} as const; 
+

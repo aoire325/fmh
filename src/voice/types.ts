@@ -2,7 +2,7 @@ export type VoiceChoice = 'male' | 'female' | 'personal' | 'device';
 export type VoicePreferences = { voice: VoiceChoice; autoSpeak: boolean; rate: number };
 export type PersonalVoice = { name: string; status: 'ready' | 'verification_required'; createdAt: string };
 export type VoiceServiceStatus = { configured: boolean; requiresAccessKey: boolean; message: string; maxUploadBytes: number };
-export const DEFAULT_VOICE_PREFERENCES: VoicePreferences = { voice: 'device', autoSpeak: false, rate: 1 };
+export const DEFAULT_VOICE_PREFERENCES: VoicePreferences = { voice: 'device', autoSpeak: true, rate: 1 };
 export const VOICE_LABELS: Record<VoiceChoice, string> = {
   male: 'Male AI voice', female: 'Female AI voice', personal: 'My personal voice', device: 'Device voice',
 };
@@ -10,7 +10,7 @@ export function readVoicePreferences(value: unknown): VoicePreferences {
   const saved = value as Partial<VoicePreferences> | null;
   return {
     voice: saved && ['male', 'female', 'personal', 'device'].includes(saved.voice ?? '') ? saved.voice! : 'device',
-    autoSpeak: saved?.autoSpeak === true,
+    autoSpeak: typeof saved?.autoSpeak === 'boolean' ? saved.autoSpeak : DEFAULT_VOICE_PREFERENCES.autoSpeak,
     rate: typeof saved?.rate === 'number' && Number.isFinite(saved.rate) && saved.rate >= 0.7 && saved.rate <= 1.2 ? saved.rate : 1,
   };
 }

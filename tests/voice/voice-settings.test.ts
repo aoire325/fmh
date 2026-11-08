@@ -1,10 +1,13 @@
-import { readVoicePreferences, videoMimeType, voiceServiceUrl } from '../../src/voice/types';
+import { DEFAULT_VOICE_PREFERENCES, readVoicePreferences, videoMimeType, voiceServiceUrl } from '../../src/voice/types';
 
 describe('voice settings and service selection', () => {
   it('keeps device speech usable without credentials and validates stored preferences', () => {
-    expect(readVoicePreferences(null)).toEqual({ voice: 'device', autoSpeak: false, rate: 1 });
+    expect(DEFAULT_VOICE_PREFERENCES).toEqual({ voice: 'device', autoSpeak: true, rate: 1 });
+    expect(readVoicePreferences(null)).toEqual(DEFAULT_VOICE_PREFERENCES);
+    expect(readVoicePreferences({ voice: 'device' }).autoSpeak).toBe(true);
+    expect(readVoicePreferences({ autoSpeak: false }).autoSpeak).toBe(false);
     expect(readVoicePreferences({ voice: 'personal', autoSpeak: true, rate: 0.8 })).toEqual({ voice: 'personal', autoSpeak: true, rate: 0.8 });
-    expect(readVoicePreferences({ voice: 'other', autoSpeak: 'true', rate: NaN })).toEqual({ voice: 'device', autoSpeak: false, rate: 1 });
+    expect(readVoicePreferences({ voice: 'other', autoSpeak: 'true', rate: NaN })).toEqual(DEFAULT_VOICE_PREFERENCES);
   });
   it('discovers the same local service as calls and uses its secure origin in production', () => {
     expect(voiceServiceUrl(undefined, undefined, true, '192.168.1.5:8081')).toBe('http://192.168.1.5:8787');

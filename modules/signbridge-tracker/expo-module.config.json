@@ -1,5 +1,6 @@
 {
-  "platforms": ["apple", "android"],
+  "platforms": ["apple", "android", "devtools"],
+  "devtools": { "serverEntryPoint": "./devtools/call-service.cjs", "bannerTitle": false },
   "apple": { "modules": ["SignBridgeTrackerModule"] },
   "android": { "modules": ["expo.modules.signbridgetracker.SignBridgeTrackerModule"] }
 }

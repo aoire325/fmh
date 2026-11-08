@@ -32,14 +32,14 @@ describe('call messages and invitations', () => {
     }
   });
   it('finds the shared call service when a development bundle has no environment setting', () => {
-    expect(signalingUrl(undefined, true, '10.67.169.106:8081')).toBe('ws://10.67.169.106:8787/calls');
-    expect(signalingUrl('', true, '192.168.1.10:8082')).toBe('ws://192.168.1.10:8787/calls');
-    expect(signalingUrl('  ', true, '172.20.10.2:8081')).toBe('ws://172.20.10.2:8787/calls');
-    expect(signalingUrl(undefined, true, 'macbook.local:8081')).toBe('ws://macbook.local:8787/calls');
+    expect(signalingUrl(undefined, true, '10.67.169.106:8081')).toBe('ws://10.67.169.106:8081/_expo/plugins/signbridge-tracker/calls');
+    expect(signalingUrl('', true, '192.168.1.10:8082')).toBe('ws://192.168.1.10:8082/_expo/plugins/signbridge-tracker/calls');
+    expect(signalingUrl('  ', true, '172.20.10.2:8081')).toBe('ws://172.20.10.2:8081/_expo/plugins/signbridge-tracker/calls');
+    expect(signalingUrl(undefined, true, 'macbook.local:8081')).toBe('ws://macbook.local:8081/_expo/plugins/signbridge-tracker/calls');
   });
   it('supports USB forwarding and the iOS simulator without changing the other phone’s address', () => {
-    expect(signalingUrl(undefined, true, '127.0.0.1:8081')).toBe('ws://127.0.0.1:8787/calls');
-    expect(signalingUrl(undefined, true, '[::1]:8082')).toBe('ws://127.0.0.1:8787/calls');
+    expect(signalingUrl(undefined, true, '127.0.0.1:8081')).toBe('ws://127.0.0.1:8081/_expo/plugins/signbridge-tracker/calls');
+    expect(signalingUrl(undefined, true, '[::1]:8082')).toBe('ws://127.0.0.1:8082/_expo/plugins/signbridge-tracker/calls');
   });
   it('always honors an explicitly configured shared service', () => {
     expect(signalingUrl(' wss://calls.example.com/calls ', true, '127.0.0.1:8081')).toBe('wss://calls.example.com/calls');

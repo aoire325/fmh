@@ -90,22 +90,25 @@ start it first if you need invitations to survive restarting Metro.
 Startup rejects an older, incompatible TalkBridge call service rather than
 silently reusing it. Stop that older development command and restart this project
 to load the updated signaling protocol; create fresh invitations after restarting.
-For local development, both phones automatically use the call service on port
-8787 of the computer serving their Expo project when no explicit service is set.
-Open the same Mac's LAN development server on both phones and reload both apps
-after updating the code. `npm start` exposes Metro to your Wi-Fi network; a
-localhost-only server cannot serve the second phone over Wi-Fi.
+For local development, both phones automatically use the call relay served by
+Expo on the same host and port as Metro when no explicit service is set. The
+relay forwards to the local signaling service on port 8787, so phones only need
+to reach the Expo development server. Open the same Mac's LAN development server
+on both phones and reload both apps after updating the code. `npm start` exposes
+Metro to your Wi-Fi network; a localhost-only server cannot serve the second
+phone over Wi-Fi.
 
 Leave `EXPO_PUBLIC_CALL_SIGNAL_URL` unset to follow the current development host,
-including USB forwarding. A fixed LAN address overrides discovery and may stop
-working when the network changes or the phone is connected only through USB.
+including USB forwarding. A fixed service address bypasses the Expo relay and
+may stop working when the network changes or the phone is connected only through USB.
 To explicitly choose a shared service, create `.env.local` containing:
 
 ```dotenv
 EXPO_PUBLIC_CALL_SIGNAL_URL=ws://YOUR_COMPUTER_LAN_IP:8787/calls
 ```
 
-Both phones must be able to reach that computer. Use its LAN IP, not localhost.
+Both phones must be able to reach that computer's signaling service directly.
+Use its LAN IP, not localhost. This setting bypasses the Expo relay.
 Copied invitations must point to an address reachable by the guest. For a host
 connected through Android USB loopback, the development service now supplies the
 computer's LAN address for the copied invite. Both phones must be able to reach

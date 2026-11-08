@@ -70,8 +70,12 @@ export function signalingUrl(value: string | undefined, development: boolean, de
       const local = hostname === 'localhost' || hostname === '[::1]' || hostname.endsWith('.local')
         || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname);
       if (local && !host.username && !host.password && !host.search && !host.hash && host.pathname === '/') {
-        // The bundled development service listens on IPv4, including loopback.
-        url = `ws://${hostname === '[::1]' || hostname === 'localhost' ? '127.0.0.1' : hostname}:8787/calls`;
+        // Route call signaling through Expo CLI's devtools endpoint. Metro is
+        // already reachable by the iPhone, while the local call service on
+        // 8787 may be blocked by the computer's firewall.
+        const relayHost = hostname === '[::1]' || hostname === 'localhost' ? '127.0.0.1' : hostname;
+        const metroPort = host.port || '8081';
+        url = `ws://${relayHost}:${metroPort}/_expo/plugins/signbridge-tracker/calls`;
       }
     } catch { /* Fall through to the actionable configuration error. */ }
   }

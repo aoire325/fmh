@@ -14,7 +14,7 @@ export const initialCallState = (): CallState => ({ phase: 'idle', code: '', ser
   remoteStream: null, camera: true, microphone: false, frontCamera: true, captions: false, channelReady: false,
   localCaption: null, remoteCaption: null, peerMedia: { type: 'media', camera: true, microphone: false, captions: false }, startedAt: null, peerSpeech: 'unknown' });
 type RTC = typeof import('react-native-webrtc');
-type Options = { action: 'create' | 'join'; code?: string; name: string; microphone: boolean; captions: boolean };
+type Options = { action: 'create' | 'join'; code?: string; serviceUrl?: string; name: string; microphone: boolean; captions: boolean };
 
 /** One owner for sockets, tracks, and the peer connection. Every asynchronous
  * continuation checks this session's generation before publishing or sending.

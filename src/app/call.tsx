@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions } from 'react-native';
@@ -28,6 +28,7 @@ function CallButton({ title, subtitle, onPress, disabled, danger, dark }: {
 }
 
 export default function CallScreen() {
+  const params = useLocalSearchParams<{ code?: string | string[]; service?: string | string[] }>();
   const call = useVideoCall();
   const meetingVoice = useMeetingVoice(call);
   const [name, setName] = useState('');
@@ -39,6 +40,8 @@ export default function CallScreen() {
   const [videoLayout, setVideoLayout] = useState<'both' | 'guest' | 'me'>('both');
   const [focusMode, setFocusMode] = useState(false);
   const [clock, setClock] = useState(Date.now);
+  const inviteCode = typeof params.code === 'string' ? params.code : '';
+  const inviteServiceUrl = typeof params.service === 'string' ? params.service : undefined;
   const { width, fontScale } = useWindowDimensions();
   const wide = width >= 760 && fontScale < 1.5;
   const inCall = ['starting', 'waiting', 'connecting', 'connected', 'reconnecting'].includes(call.phase);
@@ -51,7 +54,8 @@ export default function CallScreen() {
     const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer);
   }, [call.startedAt, inCall]);
   const start = (action: 'create' | 'join') => {
-    Keyboard.dismiss(); setNotice(''); setTyped(''); setClock(Date.now()); call.start({ action, name, code: '', microphone, captions });
+    Keyboard.dismiss(); setNotice(''); setTyped(''); setClock(Date.now());
+    call.start({ action, name, ...(action === 'join' ? { code: inviteCode, serviceUrl: inviteServiceUrl } : {}), microphone, captions });
   };
   const copyInvite = async () => {
     try { await Clipboard.setStringAsync(createInvite(call.code, call.inviteServiceUrl || call.serviceUrl)); setNotice('Invite copied. Paste the complete invite on the other phone, then return here.'); }
@@ -119,7 +123,9 @@ export default function CallScreen() {
               <Switch accessibilityLabel="Start in focus call view" value={focusMode} onValueChange={setFocusMode} trackColor={{ false: colors.line, true: colors.teal }} /></View>
           </View>
           <View style={styles.startActions}>
-            <CallButton title="Create a new call" subtitle="Create a private invitation" dark disabled={!name.trim()} onPress={() => start('create')} />
+            {inviteCode ? <CallButton title="Join this meeting" subtitle={`Invitation ${displayInvite(inviteCode)}`} dark
+              disabled={!name.trim()} onPress={() => start('join')} />
+              : <CallButton title="Create a new call" subtitle="Create a private invitation" dark disabled={!name.trim()} onPress={() => start('create')} />}
           </View>
           {call.message ? <View style={styles.notice} accessibilityRole={call.phase === 'error' ? 'alert' : undefined}>
             <Text style={styles.noticeTitle}>{call.phase === 'error' ? 'We couldn’t start this call' : 'Your call has ended'}</Text>

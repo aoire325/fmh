@@ -30,7 +30,7 @@ export function useVideoCall() {
   const start = useCallback((options: Parameters<CallSession['start']>[1]) => {
     try {
       const target = resolveCallTarget(options.action === 'join' ? options.code ?? '' : undefined,
-        process.env.EXPO_PUBLIC_CALL_SIGNAL_URL, __DEV__, Constants.expoConfig?.hostUri);
+        options.serviceUrl ?? process.env.EXPO_PUBLIC_CALL_SIGNAL_URL, __DEV__, Constants.expoConfig?.hostUri);
       const rtc = getWebRTC();
       audioModule()?.startCallAudio?.();
       session.current ??= new CallSession(rtc, (address) => new WebSocket(address), (next) => {

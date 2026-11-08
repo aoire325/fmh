@@ -11,6 +11,7 @@ final class CallLandmarkTracker {
   // Accessed only on TrackerModels.worker, shared with the translator camera.
   private var models: TrackerModels.Models?
   private var lease = false
+  private let pixels = CallPixelBufferConverter()
 
   func start(token: Int, emit: @escaping ([String: Any]) -> Void, fail: @escaping ([String: Any]) -> Void) throws {
     // Expo's AsyncFunction runs off the main thread; serialize all model access.
@@ -35,7 +36,10 @@ final class CallLandmarkTracker {
     lock.unlock()
     TrackerModels.worker.async { [self] in
       lock.lock(); let stopped = token == nil; lock.unlock()
-      if stopped && lease { lease = false; models = nil; TrackerModels.release() }
+      if stopped {
+        pixels.reset()
+        if lease { lease = false; models = nil; TrackerModels.release() }
+      }
     }
   }
 
@@ -55,7 +59,8 @@ final class CallLandmarkTracker {
       do {
         let orientation: UIImage.Orientation
         switch rotation { case 90: orientation = .right; case 180: orientation = .down; case 270: orientation = .left; default: orientation = .up }
-        let image = try MPImage(pixelBuffer: buffer, orientation: orientation)
+        let bgra = try pixels.convert(buffer)
+        let image = try MPImage(pixelBuffer: bgra, orientation: orientation)
         let hands = try models.hands.detect(videoFrame: image, timestampInMilliseconds: timestamp)
         let pose = try models.pose.detect(videoFrame: image, timestampInMilliseconds: timestamp)
         let face = try models.face.detect(videoFrame: image, timestampInMilliseconds: timestamp)

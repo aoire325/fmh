@@ -21,7 +21,7 @@ type Props = { stream: MediaStream; active: boolean; canSend: boolean; frontCame
 
 /** Mounted only while the caller explicitly enables AI captions. */
 export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCaption, onReviewedSpeech, onFeedback, compact = false }: Props) {
-  const [automatic, setAutomatic] = useState(false);
+  const [automatic, setAutomatic] = useState(true);
   const [sentenceMode, setSentenceMode] = useState(false);
   const [notice, setNotice] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -53,6 +53,17 @@ export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCa
   useEffect(() => {
     if (automatic && enabled && canSend && !sentenceMode && !processing && candidates.length) chooseCandidate(candidates[0]);
   }, [automatic, enabled, canSend, sentenceMode, processing, candidates, chooseCandidate]);
+  const sharedSentence = useRef(false);
+  const { result: sentenceResult, busy: sentenceBusy, draft: sentenceDraft, clearDraft } = sentence;
+  useEffect(() => {
+    if (!sentenceResult || sentenceResult === 'processing') { sharedSentence.current = false; return; }
+    if (sentenceBusy || sentenceResult !== 'translated' || sharedSentence.current) return;
+    sharedSentence.current = true;
+    if (!automatic || !enabled || !canSend || !sentenceMode || !sentenceDraft.trim() || sentenceDraft.length > 280) return;
+    if (onCaption(sentenceDraft, 'ai')) clearDraft();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Surface failure from the external caption transport when a translation arrives.
+    else setNotice('Caption could not be sent. Try sharing this sentence again.');
+  }, [automatic, enabled, canSend, sentenceMode, sentenceResult, sentenceBusy, sentenceDraft, clearDraft, onCaption]);
   const frame = sentenceMode ? sentence.frame : word.frame;
   const hands = frame ? visibleHands(frame).length : 0;
   const tracking = !active ? 'Camera paused' : !tracker.ready ? 'Waiting for camera tracking'
@@ -69,7 +80,7 @@ export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCa
       <Text style={styles.badge}>EXPERIMENTAL</Text>
     </View>
     <Text style={styles.hint}>{canSend
-      ? automatic && !sentenceMode ? 'New guesses are shared automatically as unreviewed AI captions.' : 'Your AI preview is private. Choose a word below to share it with your guest.'
+      ? automatic ? 'Recognized signs appear on both screens automatically as AI captions.' : 'Your AI preview is private. Choose a word below to share it with your guest.'
       : 'Try signing now. Your AI preview appears under your camera, even while waiting for a guest. Nothing is sent yet.'}</Text>
     <Text style={styles.body}>{tracking}</Text>
     <Text style={styles.hint} accessibilityLiveRegion="polite">{message}</Text>
@@ -95,7 +106,7 @@ export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCa
       <ActionButton label="Finish sign for caption" text={word.processing ? 'Reading your sign…' : 'Finish sign'} compact
         disabled={!enabled || !tracker.ready || word.status !== 'loaded' || word.processing} onPress={word.finishSign} />
     </> : <>
-      <Text style={styles.hint}>Sign a short sentence, then review the draft. Up to 12 seconds; translation may take a while.</Text>
+      <Text style={styles.hint}>Sign a short sentence, then tap Stop & translate. Completed translations are shared automatically when automatic sharing is on. Up to 12 seconds.</Text>
       {sentence.busy && !sentence.result ? <ActivityIndicator color={colors.teal} accessibilityLabel="Translating your signed sentence" /> : null}
       <SentenceResultPanel result={sentence.result} message={sentence.message} draft={sentence.draft}
         busy={sentence.busy} onChangeText={sentence.editDraft}

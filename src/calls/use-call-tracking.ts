@@ -1,6 +1,7 @@
 import { requireOptionalNativeModule, type NativeModule } from 'expo';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { MediaStream } from 'react-native-webrtc';
+import { AppState } from 'react-native';
 import type { TrackingFrame } from '@/recognition/landmarks';
 
 type Frame = TrackingFrame & { token: number };
@@ -13,14 +14,21 @@ const trackingRuntime = globalThis as typeof globalThis & { __signBridgeCallTrac
 export function useCallTracking(stream: MediaStream | null, enabled: boolean, onFrame: (frame: TrackingFrame) => void, cameraGeneration: boolean) {
   const callback = useRef(onFrame);
   const [attempt, setAttempt] = useState(0);
+  const [foreground, setForeground] = useState(AppState.currentState !== 'background');
+  useEffect(() => {
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state === 'background' || state === 'active') setForeground(state === 'active');
+    });
+    return () => listener.remove();
+  }, []);
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
-  const activation = useMemo(() => ({ stream, enabled, cameraGeneration, attempt }), [stream, enabled, cameraGeneration, attempt]);
+  const activation = useMemo(() => ({ stream, enabled, cameraGeneration, attempt, foreground }), [stream, enabled, cameraGeneration, attempt, foreground]);
   const [status, setStatus] = useState<{ activation: object | null; error: string; ready: boolean }>({ activation: null, error: '', ready: false });
   const tracker = requireOptionalNativeModule<Tracker>('SignBridgeTracker');
   useLayoutEffect(() => { callback.current = onFrame; });
   useEffect(() => {
     const track = stream?.getVideoTracks()[0];
-    if (!enabled || !track || !tracker?.startCallTracking) return;
+    if (!enabled || !foreground || !track || !tracker?.startCallTracking) return;
     const token = (trackingRuntime.__signBridgeCallTrackingToken ?? 0) + 1;
     trackingRuntime.__signBridgeCallTrackingToken = token;
     let disposed = false;
@@ -55,7 +63,7 @@ export function useCallTracking(stream: MediaStream | null, enabled: boolean, on
       disposed = true; clearInterval(watchdog); frames.remove(); errors.remove();
       try { track._setVideoEffects([]); } finally { tracker.stopCallTracking(token); }
     };
-  }, [stream, enabled, activation, tracker]);
+  }, [stream, enabled, foreground, activation, tracker]);
   return { error: enabled && !tracker?.startCallTracking ? 'AI call captions need the updated TalkBridge build. You can still type captions.'
-    : status.activation === activation ? status.error : '', ready: enabled && status.activation === activation && status.ready, retry };
+    : status.activation === activation ? status.error : '', ready: enabled && foreground && status.activation === activation && status.ready, retry };
 }

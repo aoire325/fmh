@@ -19,7 +19,7 @@
       "package": "com.signbridge.asl",
       "icon": "./assets/images/talkbridge-icon.png",
       "adaptiveIcon": {
-        "backgroundColor": "#237449",
+        "backgroundColor": "#B9DEED",
         "foregroundImage": "./assets/images/talkbridge-icon.png"
       },
       "predictiveBackGestureEnabled": false
@@ -37,8 +37,8 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#E5F2E8",
-          "image": "./assets/images/signbridge-logo.png",
+          "backgroundColor": "#B9DEED",
+          "image": "./assets/images/talkbridge-icon.png",
           "imageWidth": 220
         }
       ],

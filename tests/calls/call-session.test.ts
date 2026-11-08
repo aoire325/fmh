@@ -6,7 +6,7 @@ class Events {
   emit(name: string, event = {}) { this.listeners.get(name)?.forEach((listener) => listener(event)); }
 }
 class Track {
-  id = Math.random().toString(); enabled = true; kind = 'video'; stop = jest.fn(); applyConstraints = jest.fn(async () => {});
+  id = Math.random().toString(); enabled = true; kind = 'video'; readyState = 'live'; release = jest.fn(); stop = jest.fn(); applyConstraints = jest.fn(async () => {});
 }
 class Stream {
   tracks = [new Track()]; release = jest.fn();
@@ -15,17 +15,22 @@ class Stream {
   getAudioTracks() { return this.tracks.filter((track) => track.kind === 'audio'); }
   getTrackById(id: string) { return this.tracks.find((track) => track.id === id); }
   addTrack(track: Track) { this.tracks.push(track); }
+  removeTrack(track: Track) { this.tracks = this.tracks.filter((item) => item !== track); }
 }
 class Channel extends Events {
   label = 'signbridge-captions-v1'; readyState = 'connecting'; bufferedAmount = 0;
   send = jest.fn(); close = jest.fn();
   open() { this.readyState = 'open'; this.emit('open'); }
 }
+class Sender {
+  track: Track | null = null;
+  replaceTrack = jest.fn(async (track: Track | null) => { this.track = track; });
+}
 class Peer extends Events {
   connectionState = 'new'; remoteDescription: unknown = null; localDescription: any = null;
-  channel = new Channel(); sender = { replaceTrack: jest.fn(async (_track: Track) => {}) };
+  channel = new Channel(); sender = new Sender();
   addTrack = jest.fn(); addTransceiver = jest.fn(() => ({ sender: this.sender })); close = jest.fn();
-  offeredAudio = { receiver: { track: { kind: 'audio' } }, sender: { replaceTrack: jest.fn(async (_track: Track | null) => {}) }, direction: 'recvonly' };
+  offeredAudio = { receiver: { track: { kind: 'audio' } }, sender: new Sender(), direction: 'recvonly' };
   getTransceivers = jest.fn(() => this.remoteDescription ? [this.offeredAudio] : []);
   createDataChannel = jest.fn(() => this.channel);
   createOffer = jest.fn(async () => ({ type: 'offer', sdp: 'offer' })); createAnswer = jest.fn(async () => ({ type: 'answer', sdp: 'answer' }));
@@ -168,7 +173,33 @@ describe('call ownership and signaling', () => {
     expect(peer.sender.replaceTrack).toHaveBeenCalledWith(audio.tracks[0]);
     expect(t.session.state.microphone).toBe(true); expect(audio.release).toHaveBeenCalledWith(false);
     await t.session.toggleMicrophone(); expect(audio.tracks[0].enabled).toBe(false);
+    await t.session.toggleMicrophone(); expect(audio.tracks[0].enabled).toBe(true);
+    expect(t.getUserMedia).toHaveBeenCalledTimes(2);
     t.session.end(); expect(audio.tracks[0].stop).toHaveBeenCalled();
+  });
+  it('does not show mic on when native attachment silently fails and permits retry', async () => {
+    const t = setup(); await t.start(); const peer = await t.ready();
+    const audio = new Stream(); audio.tracks[0].kind = 'audio';
+    t.getUserMedia.mockResolvedValueOnce(audio);
+    peer.sender.replaceTrack.mockImplementationOnce(async () => {});
+    await t.session.toggleMicrophone();
+    expect(t.session.state.microphone).toBe(false);
+    expect(t.stream.getAudioTracks()).toHaveLength(0);
+    expect(audio.tracks[0].stop).toHaveBeenCalled();
+    const retry = new Stream(); retry.tracks[0].kind = 'audio';
+    t.getUserMedia.mockResolvedValueOnce(retry);
+    await t.session.toggleMicrophone();
+    expect(t.session.state.microphone).toBe(true);
+    t.session.end();
+  });
+  it('replaces an ended microphone instead of toggling a dead track', async () => {
+    const t = setup(); await t.start(); await t.ready();
+    const ended = new Track(); ended.kind = 'audio'; ended.readyState = 'ended'; t.stream.addTrack(ended);
+    const audio = new Stream(); audio.tracks[0].kind = 'audio'; t.getUserMedia.mockResolvedValueOnce(audio);
+    await t.session.toggleMicrophone();
+    expect(t.stream.getAudioTracks()).toEqual([audio.tracks[0]]);
+    expect(ended.release).toHaveBeenCalled(); expect(t.session.state.microphone).toBe(true);
+    t.session.end();
   });
   it.each([false, true])('answers on the offered audio slot, including when initially muted: %s', async (microphone) => {
     const t = setup();

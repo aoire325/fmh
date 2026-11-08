@@ -4,7 +4,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { TalkBridgeWordmark } from '@/components/talkbridge-wordmark';
 import { colors } from '@/constants/palette';
 
-export function InformationBar({ page, onHome }: { page: 'home' | 'about' | 'call' | 'settings'; onHome?: () => void }) {
+export function InformationBar({ page, onHome, brandOnly = false }: { page: 'home' | 'about' | 'call' | 'settings'; onHome?: () => void; brandOnly?: boolean }) {
   const [focused, setFocused] = useState('');
   const help = () => Alert.alert('TalkBridge help',
     'Choose New for an Instant Meeting or to create a meeting for later. Select a date in the weekly calendar to view or schedule calls.\n\nEnter an invitation in the code box and choose Join to open the call lobby.\n\nOpen Setting to adjust text size and contrast.', [{ text: 'Got it' }]);
@@ -17,14 +17,14 @@ export function InformationBar({ page, onHome }: { page: 'home' | 'about' | 'cal
   return <View style={styles.bar}>
     <View style={styles.content}>
       <TalkBridgeWordmark />
-      <View style={styles.navigation}>
+      {!brandOnly ? <View style={styles.navigation}>
         {links.map(({ label, action }) => <Pressable key={label} accessibilityRole="button" accessibilityLabel={label}
           accessibilityState={{ selected: label === 'Homepage' && page === 'home' || label === 'Setting' && page === 'settings' }}
           onPress={action} onFocus={() => setFocused(label)} onBlur={() => setFocused('')}
           style={({ pressed }) => [styles.button, (label === 'Homepage' && page === 'home' || label === 'Setting' && page === 'settings') && styles.active, focused === label && styles.focused, pressed && styles.pressed]}>
           {label === 'Help' ? <Text style={styles.helpIcon} allowFontScaling={false} aria-hidden>?</Text> : <Text style={styles.buttonText}>{label}</Text>}
         </Pressable>)}
-      </View>
+      </View> : null}
     </View>
   </View>;
 }

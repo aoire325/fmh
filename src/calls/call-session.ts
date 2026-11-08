@@ -1,4 +1,4 @@
-import type { MediaStream, RTCPeerConnection, RTCRtpSender, RTCIceCandidate, RTCSessionDescription } from 'react-native-webrtc';
+import type { MediaStream, MediaStreamTrack, RTCPeerConnection, RTCRtpSender, RTCIceCandidate, RTCSessionDescription } from 'react-native-webrtc';
 import type RTCDataChannel from 'react-native-webrtc/lib/typescript/RTCDataChannel';
 import { MeetingSpeechTransport, type MeetingAudio, type SpeechPeer } from './meeting-speech';
 import { CAPTION_LIMIT, normalizeInvite, parseCallMessage, signalingUrl, validInvite, type Caption, type CaptionKind, type MediaState } from './protocol';
@@ -272,14 +272,28 @@ export class CallSession {
     const generation = this.generation;
     const local = this.state.localStream;
     try {
-      let track = local.getAudioTracks()[0];
+      let track: MediaStreamTrack | undefined = local.getAudioTracks()[0];
+      if (track?.readyState === 'ended') {
+        local.removeTrack(track);
+        track.release();
+        track = undefined;
+        this.patch({ microphone: false }); this.broadcastMedia();
+      }
       if (!track) {
         const acquired = await this.rtc.mediaDevices.getUserMedia({ audio: true, video: false });
         if (generation !== this.generation) { acquired.getTracks().forEach((item) => item.stop()); acquired.release(); return; }
         track = acquired.getAudioTracks()[0];
         if (!track) { acquired.release(); throw new Error('No microphone is available.'); }
-        try { if (this.audioSender) await this.audioSender.replaceTrack(track); }
-        catch (error) { acquired.release(); throw error; }
+        // Keep new capture muted until attachment succeeds. This WebRTC
+        // version resolves replaceTrack even when the native operation fails.
+        track.enabled = false;
+        try {
+          if (this.audioSender) {
+            await this.audioSender.replaceTrack(track);
+            if (generation === this.generation && this.audioSender?.track !== track) throw new Error('Microphone attachment failed.');
+          }
+        }
+        catch (error) { acquired.getTracks().forEach((item) => item.stop()); acquired.release(); throw error; }
         if (generation !== this.generation) { acquired.release(); return; }
         local.addTrack(track); acquired.release(false);
         track.enabled = this.appActive;

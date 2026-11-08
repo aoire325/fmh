@@ -46,7 +46,8 @@ export default function CallScreen() {
   const wide = width >= 760 && fontScale < 1.5;
   const inCall = ['starting', 'waiting', 'connecting', 'connected', 'reconnecting'].includes(call.phase);
   const connected = call.phase === 'connected';
-  const focusedCall = inCall && focusMode;
+  const waitingRoom = inCall && !connected && !call.startedAt;
+  const focusedCall = inCall && !waitingRoom && focusMode;
   const canSend = connected && call.channelReady;
   const elapsed = call.startedAt ? Math.max(0, Math.floor((clock - call.startedAt) / 1000)) : 0;
   useEffect(() => {
@@ -81,7 +82,7 @@ export default function CallScreen() {
   return <SafeAreaView style={[styles.screen, focusedCall && styles.focusScreen]} edges={['top', 'bottom']}>
     <StatusBar style={focusedCall ? 'light' : 'dark'} />
     {inCall ? <KeepCallAwake /> : null}
-    {!inCall ? <InformationBar page="call" /> : null}
+    {!inCall || waitingRoom ? <InformationBar page="call" brandOnly={waitingRoom} /> : null}
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={!focusedCall}
         contentContainerStyle={[styles.content, wide && styles.wideContent, focusedCall && styles.focusContent,
@@ -111,7 +112,7 @@ export default function CallScreen() {
             <TextInput accessibilityLabel="Your display name" value={name} onChangeText={setName} placeholder="What should they call you?" placeholderTextColor={colors.inkSoft}
               autoCapitalize="words" maxLength={40} style={styles.input} />
             <View style={styles.preference}><View style={styles.flex}><Text style={styles.preferenceTitle}>AI sign captions</Text>
-              <Text style={styles.body}>Recognize your signing on this phone. Review words before sharing, or enable live guesses in the call.</Text></View>
+              <Text style={styles.body}>Recognize your signing on this phone. Recognized words appear automatically on both screens as AI captions.</Text></View>
               <Switch accessibilityLabel="Enable AI sign captions for my call" value={captions} onValueChange={setCaptions} trackColor={{ false: colors.line, true: colors.teal }} /></View>
             <View style={styles.separator} />
             <View style={styles.preference}><View style={styles.flex}><Text style={styles.preferenceTitle}>Start with microphone on</Text>
@@ -130,16 +131,26 @@ export default function CallScreen() {
           {call.message ? <View style={styles.notice} accessibilityRole={call.phase === 'error' ? 'alert' : undefined}>
             <Text style={styles.noticeTitle}>{call.phase === 'error' ? 'We couldn’t start this call' : 'Your call has ended'}</Text>
             <Text style={styles.body}>{call.message}</Text></View> : null}
-          <Text style={styles.footnote}>Calls share your live video and any enabled audio with your guest. Only captions you share are sent. AI recognition is experimental and can miss or change meaning.</Text>
-        </> : <>
-          {!focusedCall ? <View accessibilityLiveRegion="polite" style={styles.callHeading}><Text style={styles.callTitle}>{call.phase === 'waiting' ? 'Your invitation is ready.' : connected ? `You + ${call.peerName}` : 'Bringing you together…'}</Text>
-            <Text style={styles.body}>{call.message}</Text></View>
-            : null}
-          {call.phase === 'waiting' && !focusedCall ? <View style={styles.inviteCard}>
-            <View style={styles.flex}><Text style={styles.eyebrow}>PRIVATE CALL CODE</Text><Text selectable style={styles.invite}>{displayInvite(call.code)}</Text>
-              <Text style={styles.body}>One guest · expires in 15 minutes · share privately</Text></View>
+          <Text style={styles.footnote}>Calls share your live video and any enabled audio with your guest. AI sign captions are shared automatically when enabled. AI recognition is experimental and can miss or change meaning.</Text>
+        </> : waitingRoom ? <>
+          {call.code ? <View style={styles.inviteCard}>
+            <Text style={styles.eyebrow}>PRIVATE CALL CODE</Text>
+            <Text selectable style={styles.invite}>{displayInvite(call.code)}</Text>
             <CallButton title="Copy invite" onPress={() => void copyInvite()} />
           </View> : null}
+          <CallButton title="Cancel call" onPress={call.end} />
+          <Text style={styles.cardTitle}>My Video</Text>
+          <CallVideoTile name={name || 'You'} local streamURL={call.localStream?.toURL()} mirrored={call.frontCamera}
+            camera={call.camera} microphone={call.microphone} caption={null} compact height={320} />
+          <View style={styles.joinStatus} accessibilityLiveRegion="polite">
+            <Text style={styles.callTitle}>Join the Call</Text>
+            <Text style={styles.body}>{call.peerName ? `${call.peerName} has joined. Connecting your call…`
+              : call.phase === 'starting' ? 'Preparing your camera…' : 'The other person has not joined yet.'}</Text>
+          </View>
+        </> : <>
+          {!focusedCall ? <View accessibilityLiveRegion="polite" style={styles.callHeading}><Text style={styles.callTitle}>{connected ? `You + ${call.peerName}` : 'Bringing you together…'}</Text>
+            <Text style={styles.body}>{call.message}</Text></View>
+            : null}
           {!focusedCall ? <View style={styles.videoSelector} accessibilityRole="tablist">
             {(['both', 'guest', 'me'] as const).map((layout) => <Pressable key={layout} accessibilityRole="tab"
               accessibilityLabel={layout === 'both' ? 'Show both videos' : layout === 'guest' ? 'Enlarge guest video' : 'Enlarge my video'}
@@ -190,6 +201,7 @@ export default function CallScreen() {
 }
 
 const styles = StyleSheet.create({
+  joinStatus: { alignItems: 'center', gap: 8, paddingVertical: 12 },
   focusScreen: { backgroundColor: '#0D2029' }, focusContent: { flexGrow: 1, maxWidth: '100%', padding: 6, paddingBottom: 0, gap: 6 },
   focusScrollable: { flex: undefined, flexGrow: 1 },
   focusHeader: { position: 'absolute', top: 12, left: 12, right: 12, zIndex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },

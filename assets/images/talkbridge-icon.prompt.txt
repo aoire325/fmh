@@ -1,11 +1,6 @@
-Tool: built-in image_gen.
+Tool: built-in image_gen (imagegen skill).
 Output: assets/images/talkbridge-icon.png
-Used for iOS, Android legacy, and Android adaptive launcher icons.
+Used for app icons and launch splash.
 
-Final prompt:
-Use case: logo-brand
-Asset type: final square mobile app launcher icon for TalkBridge.
-Create a minimal, polished monogram icon: SOLID rich forest-green background #237449 filling the entire square edge to edge, with ONLY the lowercase letters "tb" in pure WHITE #FFFFFF, large and centered both optically and geometrically.
-Typography: very bold, clean, rounded geometric sans-serif lowercase t and lowercase b, with smooth curves and crisp legible letterforms. The two letters read as exactly "tb", side by side with a small natural kerning gap. Do not use uppercase letters.
-Composition: the white monogram fits entirely within the central 52% of canvas width and 44% of canvas height, with generous green safe margins around it so it survives circular and rounded-square launcher masks. Square 1024x1024 PNG. The t and b should have the same cap/ascender height and share a baseline, appearing as a harmonious single mark.
-Flat solid green and white only. Opaque green background, NO transparent pixels, NO rounded corners baked into the square, NO border, NO extra symbol, NO tree, NO gradient, NO shadow, NO texture, NO mockup, NO other text.
+Final edit prompt:
+Edit this existing TalkBridge app logo. Preserve the exact white lowercase tb monogram, its shapes, scale and centered position. Change ONLY the green background to flat light blue #B9DEED matching the app homepage. No other graphic changes, no added text, no shadow or texture. Output a square 1024x1024 opaque PNG suitable as an app icon and splash image.

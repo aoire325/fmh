@@ -137,8 +137,24 @@ describe('focus call controls', () => {
   });
   it('offers focus before joining and returns to the lobby after hang-up', () => {
     mockState.phase = 'idle'; mockState.localStream = null; render(); click('Start in focus call view');
-    mockState.phase = 'waiting'; mockState.code = 'ABCDEFGHJKLM'; render(); expect(button('Exit focus view')).not.toBeNull(); expect(button('Copy private call invite')).not.toBeNull();
-    mockState.phase = 'ended'; render(); expect(button('Exit focus view')).toBeNull(); expect(button('Start a new call')).not.toBeNull();
+    mockState.phase = 'waiting'; mockState.code = 'ABCDEFGHJKLM'; render(); expect(button('Exit focus view')).toBeNull(); expect(button('Copy invite')).not.toBeNull();
+    mockState.phase = 'ended'; render(); expect(button('Exit focus view')).toBeNull(); expect(button('Create a new call')).not.toBeNull();
+  });
+  it('shows only the brand, invite and local video with guest status while waiting', () => {
+    mockState.phase = 'waiting'; mockState.peerName = ''; mockState.code = 'ABCDEFGHJKLM'; render();
+    expect(container.textContent).toContain('talkbridge');
+    expect(container.textContent).toContain('My Video'); expect(container.textContent).toContain('Join the Call');
+    expect(container.textContent).toContain('The other person has not joined yet.');
+    expect(container.querySelector('[data-stream="local-video"]')).not.toBeNull();
+    expect(container.querySelector('[data-stream="guest-video"]')).toBeNull();
+    expect(container.querySelector('[data-composer]')).toBeNull();
+    for (const label of ['Homepage', 'Show both videos', 'Enlarge guest video', 'Type a caption']) expect(button(label)).toBeNull();
+    for (const text of ['Your invitation', 'One guest', 'Meeting voice', 'Say it with text', 'Your shared words']) expect(container.textContent).not.toContain(text);
+    mockState.phase = 'connecting'; mockState.peerName = 'Alex'; render();
+    expect(container.textContent).toContain('Alex has joined.');
+    mockState.phase = 'connected'; render();
+    expect(container.querySelector('[data-stream="guest-video"]')).not.toBeNull();
+    expect(container.querySelector('[data-composer]')).not.toBeNull();
   });
   it('allows scrolling for large system text so controls stay reachable', () => {
     mockFontScale = 1.8; render(); click('Focus call'); expect(container.querySelector('[data-scroll-enabled="true"]')).not.toBeNull();
@@ -158,13 +174,13 @@ describe('focus call controls', () => {
   it('prefills a complete invite when opened from a shared link and waits for Join', () => {
     mockState.phase = 'idle'; mockState.localStream = null;
     mockParams = { code: 'ABCDEFGHJKLM', service: 'wss://host-calls.example.com/calls' }; render();
-    expect(container.querySelector<HTMLInputElement>('[aria-label="Call invite code"]')!.value).toBe(createInvite(mockParams.code!, mockParams.service!));
+    expect(button('Join this meeting')).not.toBeNull(); expect(container.textContent).toContain('ABCD - EFGH - JKLM');
     expect(mockActions.start).not.toHaveBeenCalled();
   });
   it('prefills a plain code from the homepage and waits for Join', () => {
     mockState.phase = 'idle'; mockState.localStream = null;
     mockParams = { code: 'ABCDEFGHJKLM' }; render();
-    expect(container.querySelector<HTMLInputElement>('[aria-label="Call invite code"]')!.value).toBe('ABCDEFGHJKLM');
+    expect(button('Join this meeting')).not.toBeNull();
     expect(mockActions.start).not.toHaveBeenCalled();
   });
 });

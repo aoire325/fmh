@@ -14,6 +14,12 @@ const mockModule = {
     mockListeners.set(name, callback); return { remove: () => mockListeners.delete(name) };
   }),
 };
+let mockAppStateChange: (state: string) => void;
+jest.mock('react-native', () => ({ AppState: { currentState: 'active',
+  addEventListener: (_event: string, callback: typeof mockAppStateChange) => {
+    mockAppStateChange = callback; return { remove: jest.fn() };
+  },
+} }));
 jest.mock('expo', () => ({ requireOptionalNativeModule: () => mockModule }));
 const effects = jest.fn();
 const stream = { getVideoTracks: () => [{ _setVideoEffects: effects }] } as unknown as NonNullable<Parameters<typeof useCallTracking>[0]>;
@@ -56,6 +62,17 @@ describe('call tracker frame health', () => {
     act(() => jest.advanceTimersByTime(20000));
     expect(current.error).toBe('Model is missing'); expect(current.ready).toBe(false);
     act(() => emitFrame()); expect(onFrame).not.toHaveBeenCalled();
+  });
+  it('restarts host tracking after leaving to share an invite, including after a failure', async () => {
+    const previous = token();
+    act(() => mockListeners.get('onCallTrackingError')?.({ token: previous, message: 'Capture interrupted' }));
+    await act(async () => mockAppStateChange('background'));
+    expect(mockModule.stopCallTracking).toHaveBeenCalledWith(previous);
+    expect(current.ready).toBe(false);
+    await act(async () => mockAppStateChange('active'));
+    expect(token()).toBeGreaterThan(previous); expect(current.error).toBe('');
+    act(() => emitFrame(previous)); expect(onFrame).not.toHaveBeenCalled();
+    act(() => emitFrame()); expect(current.ready).toBe(true);
   });
   it('releases listeners and the processor when disabled', () => {
     const clearWatchdog = jest.spyOn(globalThis, 'clearInterval');

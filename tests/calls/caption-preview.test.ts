@@ -33,9 +33,9 @@ jest.mock('../../src/calls/use-call-tracking', () => ({ useCallTracking: (_strea
   mockTrackingEnabled = enabled; mockOnFrame = callback; return mockTracker;
 } }));
 jest.mock('../../src/state/use-recognition-examples', () => ({ useRecognitionExamples: () => ({ learning: undefined }) }));
-jest.mock('../../src/recognition/use-sentence-translator', () => ({ useSentenceTranslator: () => ({
-  busy: false, recording: false, draft: '', message: '', frame: null, onFrame: jest.fn(),
-}) }));
+const mockSentence = { busy: false, recording: false, draft: '', result: null as string | null,
+  message: '', frame: null, onFrame: jest.fn(), clearDraft: jest.fn() };
+jest.mock('../../src/recognition/use-sentence-translator', () => ({ useSentenceTranslator: () => mockSentence }));
 jest.mock('../../assets/models/asl_words_citizen.tflite', () => 1);
 jest.mock('../../assets/models/asl_words_2000.tflite', () => 2);
 jest.mock('../../src/recognition/local-model', () => ({ useBundledModel: () => {
@@ -70,6 +70,7 @@ describe('private AI preview before a guest joins', () => {
   };
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    mockSentence.result = null; mockSentence.draft = ''; mockSentence.busy = false; mockSentence.clearDraft.mockClear();
     mockModelCalls = 0; mockSend.mockClear(); mockFeedback.mockClear(); mockSpeech.mockClear();
     mockTracker.error = ''; mockTracker.ready = true; mockTracker.retry.mockClear();
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
@@ -88,7 +89,7 @@ describe('private AI preview before a guest joins', () => {
     expect(buttons.length).toBeGreaterThan(0); expect(buttons.every((b) => b.disabled)).toBe(true);
   });
   it('does not send a practice guess when auto-sharing is enabled and a guest arrives', async () => {
-    render(); act(() => click('Share AI guesses automatically')); await sign();
+    render(); await sign();
     expect(mockSend).not.toHaveBeenCalled();
     render(true);
     expect(mockFeedback).toHaveBeenLastCalledWith(expect.objectContaining({ preview: '' }));
@@ -97,8 +98,26 @@ describe('private AI preview before a guest joins', () => {
     expect(mockSend).toHaveBeenCalledWith(expect.stringMatching(/hello/i), 'ai');
     expect(mockSpeech).not.toHaveBeenCalled();
   });
+  it('shares a completed sentence once, but never streams incomplete decoder text', () => {
+    render(true);
+    const mode = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent === 'Short sentence')!;
+    act(() => mode.click());
+    mockSentence.result = 'processing'; mockSentence.busy = true; mockSentence.draft = 'I need'; render(true);
+    expect(mockSend).not.toHaveBeenCalled();
+    mockSentence.result = 'translated'; mockSentence.busy = false; mockSentence.draft = 'I need help.'; render(true);
+    expect(mockSend).toHaveBeenCalledWith('I need help.', 'ai');
+    expect(mockSentence.clearDraft).toHaveBeenCalledTimes(1);
+    render(true); expect(mockSend).toHaveBeenCalledTimes(1);
+  });
+  it('shares each newly recognized word automatically without choosing a candidate', async () => {
+    render(true); await sign();
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    expect(mockSend).toHaveBeenCalledWith(expect.stringMatching(/hello/i), 'ai');
+    render(true, true, true);
+    expect(mockSend).toHaveBeenCalledTimes(1);
+  });
   it('shares a reviewed result only after the caller chooses it', async () => {
-    render(true); await sign(); expect(mockSend).not.toHaveBeenCalled();
+    render(true); act(() => click('Share AI guesses automatically')); await sign(); expect(mockSend).not.toHaveBeenCalled();
     const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((b) => b.getAttribute('aria-label')?.startsWith('Caption '))!;
     act(() => button.click());
     expect(mockSend).toHaveBeenCalledWith(expect.any(String), 'reviewed');
@@ -125,7 +144,7 @@ describe('private AI preview before a guest joins', () => {
     expect(mockSend).not.toHaveBeenCalled();
   });
   it('preserves preview and sharing choice across focus changes and opens AI options', async () => {
-    render(true); await sign(); render(true, true, true);
+    render(true); act(() => click('Share AI guesses automatically')); await sign(); render(true, true, true);
     expect(mockFeedback).toHaveBeenLastCalledWith(expect.objectContaining({ preview: expect.stringMatching(/hello/i) }));
     act(() => click('AI caption options')); expect(container.textContent).toContain('Short sentence');
     act(() => click('Share AI guesses automatically'));

@@ -14,6 +14,7 @@ let mockModelCalls = 0;
 const mockTracker = { ready: true, error: '', retry: jest.fn() };
 const mockSend = jest.fn((..._args: unknown[]) => true);
 const mockSpeech = jest.fn();
+const mockRecognizedSpeech = jest.fn();
 const mockFeedback = jest.fn();
 const mockStream = {} as Parameters<typeof CallCaptionComposer>[0]['stream'];
 jest.mock('expo-symbols', () => ({ SymbolView: () => jest.requireActual('react').createElement('span', { 'data-symbol': true }) }));
@@ -57,7 +58,7 @@ describe('private AI preview before a guest joins', () => {
   let root: { render: (node: ReactNode) => void; unmount: () => void };
   let container: HTMLDivElement;
   const render = (canSend = false, active = true, compact = false) => act(() => root.render(React.createElement(CallCaptionComposer, {
-    stream: mockStream, active, canSend, frontCamera: true, onCaption: mockSend, onFeedback: mockFeedback, compact, onReviewedSpeech: mockSpeech,
+    stream: mockStream, active, canSend, frontCamera: true, onCaption: mockSend, onFeedback: mockFeedback, compact, onReviewedSpeech: mockSpeech, onRecognizedSpeech: mockRecognizedSpeech,
   })));
   const click = (label: string) => {
     const button = container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
@@ -71,7 +72,7 @@ describe('private AI preview before a guest joins', () => {
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mockSentence.result = null; mockSentence.draft = ''; mockSentence.message = ''; mockSentence.busy = false; mockSentence.clearDraft.mockClear();
-    mockModelCalls = 0; mockSend.mockClear(); mockFeedback.mockClear(); mockSpeech.mockClear();
+    mockModelCalls = 0; mockSend.mockClear(); mockFeedback.mockClear(); mockSpeech.mockClear(); mockRecognizedSpeech.mockClear();
     mockTracker.error = ''; mockTracker.ready = true; mockTracker.retry.mockClear();
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
   });
@@ -106,6 +107,7 @@ describe('private AI preview before a guest joins', () => {
     expect(mockSend).not.toHaveBeenCalled();
     mockSentence.result = 'translated'; mockSentence.busy = false; mockSentence.draft = 'I need help.'; render(true);
     expect(mockSend).toHaveBeenCalledWith('I need help.', 'ai');
+    expect(mockRecognizedSpeech).toHaveBeenCalledWith('I need help.');
     expect(mockSentence.clearDraft).toHaveBeenCalledTimes(1);
     render(true); expect(mockSend).toHaveBeenCalledTimes(1);
   });
@@ -124,6 +126,7 @@ describe('private AI preview before a guest joins', () => {
   it('shares each newly recognized word automatically without choosing a candidate', async () => {
     render(true); await sign();
     expect(mockSend).toHaveBeenCalledTimes(1);
+    expect(mockRecognizedSpeech).toHaveBeenCalledTimes(1);
     expect(mockSend).toHaveBeenCalledWith(expect.stringMatching(/hello/i), 'ai');
     render(true, true, true);
     expect(mockSend).toHaveBeenCalledTimes(1);

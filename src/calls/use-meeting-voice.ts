@@ -14,7 +14,7 @@ export function useMeetingVoice(call: ReturnType<typeof useVideoCall>) {
   const settings = useVoiceSettings();
   const { refresh, stop: stopTranslator } = settings;
   const [voice, updateVoice] = useState<Exclude<VoiceChoice, 'device'>>(() => settings.preferences.voice === 'device' ? 'male' : settings.preferences.voice);
-  const [automatic, updateAutomatic] = useState(false);
+  const [automatic, updateAutomatic] = useState(true);
   const [listen, updateListen] = useState(true);
   const [outgoing, setOutgoing] = useState(idle);
   const [incoming, setIncoming] = useState(idle);
@@ -39,12 +39,15 @@ export function useMeetingVoice(call: ReturnType<typeof useVideoCall>) {
       if (bytes.length > MAX_MEETING_AUDIO) throw new Error('This voice message is too long. Try a shorter sentence.');
       sending();
       await latest.current.call.sendSpeech(bytes, job.text, job.options.kind, signal);
-      if (!signal.aborted) setNotice('Voice sent to your guest.');
+      if (!signal.aborted) {
+        inbox.speak(job.text, { id: 0, text: job.text, kind: job.options.kind, bytes }, true);
+        setNotice('Voice sent to your guest.');
+      }
     } finally {
       clearTimeout(timer); signal.removeEventListener('abort', abort);
       if (file?.exists) file.delete();
     }
-  }, []);
+  }, [inbox]);
   const outbox = useRef<SpeechQueue<Request> | null>(null);
   useLayoutEffect(() => { latest.current = { call, connected, voice, automatic, listen, settings }; });
   useEffect(() => {
@@ -70,7 +73,7 @@ export function useMeetingVoice(call: ReturnType<typeof useVideoCall>) {
   useEffect(() => () => { inbox.stop(); player.dispose(); }, [inbox, player]);
   const speak = useCallback((text: string, kind: CaptionKind = 'typed') => {
     const current = latest.current;
-    if (!text.trim() || text.trim().length > 280 || kind === 'ai') return false;
+    if (!text.trim() || text.trim().length > 280) return false;
     if (!current.connected || current.call.peerSpeech !== 'ready') { setNotice('Connect to a guest using the updated TalkBridge app before speaking.'); return false; }
     if (!current.settings.service?.configured) { setNotice('Connect your AI voices in Voice & speaking before using meeting speech.'); return false; }
     if (current.voice === 'personal' && current.settings.profile?.status !== 'ready') { setNotice('Your personal voice is not ready. Choose Male or Female AI voice.'); return false; }
@@ -78,12 +81,13 @@ export function useMeetingVoice(call: ReturnType<typeof useVideoCall>) {
     return outbox.current?.speak(text, { voice: current.voice, rate: current.settings.preferences.rate, kind }, true) ?? false;
   }, []);
   const speakReviewed = useCallback((text: string) => { if (latest.current.automatic) speak(text, 'reviewed'); }, [speak]);
+  const speakRecognized = useCallback((text: string) => { if (latest.current.automatic) speak(text, 'ai'); }, [speak]);
   const chooseVoice = useCallback((next: Exclude<VoiceChoice, 'device'>) => { stop(); updateVoice(next); setNotice(''); }, [stop]);
   const setAutomatic = useCallback((enabled: boolean) => { updateAutomatic(enabled); if (!enabled) stop(); }, [stop]);
   const setListen = useCallback((enabled: boolean) => { updateListen(enabled); if (!enabled) inbox.stop(); }, [inbox]);
   const canSpeak = connected && call.peerSpeech === 'ready' && settings.service?.configured === true
     && (voice !== 'personal' || settings.profile?.status === 'ready');
-  return { voice, chooseVoice, automatic, setAutomatic, listen, setListen, speak, speakReviewed, stop, canSpeak,
+  return { voice, chooseVoice, automatic, setAutomatic, listen, setListen, speak, speakReviewed, speakRecognized, stop, canSpeak,
     outgoing, incoming, notice: connected ? notice : '', settings, connected, peerSpeech: call.peerSpeech };
 }
 export type MeetingVoice = ReturnType<typeof useMeetingVoice>;

@@ -16,3 +16,8 @@
 -dontwarn com.google.mediapipe.proto.CalculatorProfileProto$CalculatorProfile
 -dontwarn com.google.mediapipe.proto.GraphTemplateProto$CalculatorGraphTemplate
 
+# Jitsi WebRTC 155.0.1 ships an unused Dav1d JNI shim without its old Java decoder
+# interface. SoftwareVideoDecoderFactory uses its own native factory instead.
+# Suppress only this missing interface; keep other missing-class checks enabled.
+-dontwarn org.webrtc.Dav1dDecoder$Natives
+

@@ -52,7 +52,7 @@ export class MeetingSpeechTransport {
     else if (value.type === 'speech-start' && this.enabled) {
       if (Number.isSafeInteger(value.id) && value.id > this.lastReceived && Number.isSafeInteger(value.size)
         && value.size > 0 && value.size <= MAX_MEETING_AUDIO && typeof value.text === 'string'
-        && value.text.trim() && value.text.length <= CAPTION_LIMIT && ['typed', 'reviewed'].includes(value.kind)) {
+        && value.text.trim() && value.text.length <= CAPTION_LIMIT && ['typed', 'reviewed', 'ai'].includes(value.kind)) {
         this.lastReceived = value.id;
         this.incoming = { id: value.id, size: value.size, text: value.text.replace(/[\x00-\x1f\x7f]/g, ' ').trim(),
           kind: value.kind, chunks: [], received: 0, at: this.now() };
@@ -78,8 +78,8 @@ export class MeetingSpeechTransport {
   async sendAudio(bytes: Uint8Array, text: string, kind: CaptionKind, signal: AbortSignal) {
     if (this.sending) throw new Error('Another meeting message is still being sent.');
     if (this.peer !== 'ready') throw new Error(this.peer === 'muted' ? 'Your guest has turned off meeting voice playback.' : 'Your guest needs the updated TalkBridge app for meeting voices.');
-    if (!bytes.length || bytes.length > MAX_MEETING_AUDIO || !text.trim() || text.length > CAPTION_LIMIT || kind === 'ai') {
-      throw new Error('Use a short typed message or reviewed sign caption for meeting speech.');
+    if (!bytes.length || bytes.length > MAX_MEETING_AUDIO || !text.trim() || text.length > CAPTION_LIMIT || !['typed', 'reviewed', 'ai'].includes(kind)) {
+      throw new Error('Use a short typed message or sign caption for meeting speech.');
     }
     const id = ++this.sequence; const generation = this.generation; this.sending = true;
     const current = () => !signal.aborted && generation === this.generation && this.channel.readyState === 'open' && this.peer === 'ready';

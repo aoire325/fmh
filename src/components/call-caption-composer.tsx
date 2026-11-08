@@ -16,19 +16,20 @@ import { SentenceResultPanel } from './sentence-result-panel';
 export type CallCaptionFeedback = { preview: string; message: string; tracking: string };
 type Props = { stream: MediaStream; active: boolean; canSend: boolean; frontCamera: boolean;
   onCaption: (text: string, kind: CaptionKind) => boolean;
+  onRecognizedSpeech?: (text: string) => void;
   onReviewedSpeech?: (text: string) => void;
   onFeedback: (feedback: CallCaptionFeedback | null) => void; compact?: boolean };
 
 /** Mounted only while the caller explicitly enables AI captions. */
-export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCaption, onReviewedSpeech, onFeedback, compact = false }: Props) {
+export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCaption, onReviewedSpeech, onRecognizedSpeech, onFeedback, compact = false }: Props) {
   const [automatic, setAutomatic] = useState(true);
   const [sentenceMode, setSentenceMode] = useState(false);
   const [notice, setNotice] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
   const generation = Number(frontCamera) + Number(sentenceMode) * 2;
   const phrase = useRef({ text: '', at: 0 });
-  const settings = useRef({ automatic, onCaption, canSend, onReviewedSpeech });
-  useLayoutEffect(() => { settings.current = { automatic, onCaption, canSend, onReviewedSpeech }; });
+  const settings = useRef({ automatic, onCaption, canSend, onReviewedSpeech, onRecognizedSpeech });
+  useLayoutEffect(() => { settings.current = { automatic, onCaption, canSend, onReviewedSpeech, onRecognizedSpeech }; });
   useLayoutEffect(() => { phrase.current = { text: '', at: 0 }; }, [frontCamera, active, sentenceMode, automatic, canSend]);
   const appendWord = useCallback((word: string) => {
     if (!settings.current.canSend) return;
@@ -37,7 +38,8 @@ export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCa
     const text = previous && `${previous} ${word}`.length <= 280 ? `${previous} ${word}` : word;
     if (settings.current.onCaption(text, settings.current.automatic ? 'ai' : 'reviewed')) {
       phrase.current = { text, at: now }; setNotice('');
-      if (!settings.current.automatic) settings.current.onReviewedSpeech?.(word);
+      if (settings.current.automatic) settings.current.onRecognizedSpeech?.(word);
+      else settings.current.onReviewedSpeech?.(word);
     } else setNotice('Caption could not be sent. Wait for the connection, then try again.');
   }, []);
   // Local recognition is useful before anyone joins. Only transmission depends
@@ -60,10 +62,10 @@ export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCa
     if (sentenceBusy || sentenceResult !== 'translated' || sharedSentence.current) return;
     sharedSentence.current = true;
     if (!automatic || !enabled || !canSend || !sentenceMode || !sentenceDraft.trim() || sentenceDraft.length > 280) return;
-    if (onCaption(sentenceDraft, 'ai')) clearDraft();
+    if (onCaption(sentenceDraft, 'ai')) { onRecognizedSpeech?.(sentenceDraft); clearDraft(); }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Surface failure from the external caption transport when a translation arrives.
     else setNotice('Caption could not be sent. Try sharing this sentence again.');
-  }, [automatic, enabled, canSend, sentenceMode, sentenceResult, sentenceBusy, sentenceDraft, clearDraft, onCaption]);
+  }, [automatic, enabled, canSend, sentenceMode, sentenceResult, sentenceBusy, sentenceDraft, clearDraft, onCaption, onRecognizedSpeech]);
   const frame = sentenceMode ? sentence.frame : word.frame;
   const hands = frame ? visibleHands(frame).length : 0;
   const tracking = !active ? 'Camera paused' : !tracker.ready ? 'Waiting for camera tracking'

@@ -179,7 +179,7 @@ export default function CallScreen() {
             <Text style={styles.body}>{call.captions ? 'Your gestures can become captions under your video.' : 'You can sign freely or send a typed caption.'}</Text></View>
             <Switch accessibilityLabel="AI sign captions during call" value={call.captions} onValueChange={call.setCaptions} trackColor={{ false: colors.line, true: colors.teal }} /></View> : null}
           {call.captions && call.localStream ? <CallCaptionComposer stream={call.localStream} active={call.camera} canSend={canSend}
-            frontCamera={call.frontCamera} onCaption={call.sendCaption} onReviewedSpeech={meetingVoice.speakReviewed} onFeedback={setCaptionFeedback} compact={focusedCall} /> : null}
+            frontCamera={call.frontCamera} onCaption={call.sendCaption} onReviewedSpeech={meetingVoice.speakReviewed} onRecognizedSpeech={meetingVoice.speakRecognized} onFeedback={setCaptionFeedback} compact={focusedCall} /> : null}
           <MeetingVoiceControls voice={meetingVoice} compact={focusedCall} composer={textComposer} />
           {!focusedCall ? <Text style={styles.footnote}>Keep TalkBridge open during your call. Caption processing happens on your phone; shared captions travel with the call. Calls and captions are not saved by TalkBridge.</Text> : null}
         </>}

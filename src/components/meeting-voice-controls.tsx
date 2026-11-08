@@ -19,9 +19,9 @@ export function MeetingVoiceControls({ voice, compact, composer }: { voice: Meet
         <Text style={[styles.choiceText, voice.voice === choice && styles.selectedText]}>{choice === 'male' ? 'Male' : choice === 'female' ? 'Female' : 'My voice'}</Text>
       </Pressable>)}</View>
       <Text style={styles.hint}>{voice.voice === 'personal' ? voice.settings.profile?.name : voice.settings.defaults?.[voice.voice]}</Text>
-      <View style={styles.row}><View style={styles.copy}><Text style={styles.label}>Speak reviewed signs</Text>
-        <Text style={styles.hint}>Speak each word or sentence after you choose to share it. Unreviewed AI guesses stay silent.</Text></View>
-        <Switch accessibilityLabel="Speak reviewed signs in the meeting" value={voice.automatic} onValueChange={voice.setAutomatic}
+      <View style={styles.row}><View style={styles.copy}><Text style={styles.label}>Speak recognized signs</Text>
+        <Text style={styles.hint}>Automatically speak each recognized word or completed sentence in your selected AI voice.</Text></View>
+        <Switch accessibilityLabel="Speak recognized signs in the meeting" value={voice.automatic} onValueChange={voice.setAutomatic}
           trackColor={{ false: colors.line, true: colors.accent }} />
       </View>
       <View style={styles.row}><View style={styles.copy}><Text style={styles.label}>Hear guest’s AI voice</Text>

@@ -44,12 +44,14 @@ describe('meeting text and sign speech', () => {
     expect(mockSend).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]), 'I need help.', 'typed', expect.anything());
     expect(sample.delete).toHaveBeenCalledTimes(1); expect(voice.notice).toMatch(/sent/);
   });
-  it('speaks each reviewed word once when enabled and never speaks raw guesses', async () => {
-    act(() => voice.speakReviewed('HELLO')); expect(mockCloud).not.toHaveBeenCalled();
-    act(() => voice.setAutomatic(true));
-    await act(async () => { voice.speakReviewed('HELLO'); voice.speakReviewed('FRIEND'); await flush(); });
-    expect(mockCloud.mock.calls.map((args) => args[0])).toEqual(['HELLO', 'FRIEND']);
-    expect(voice.speak('Unreviewed guess', 'ai')).toBe(false);
+  it('speaks recognized words and sentences by default, locally and to the guest, and honors mute', async () => {
+    await act(async () => { voice.speakRecognized('HELLO'); voice.speakRecognized('I need help.'); await flush(); });
+    expect(mockCloud.mock.calls.map((args) => args[0])).toEqual(['HELLO', 'I need help.']);
+    expect(mockSend.mock.calls.map((args) => args[2])).toEqual(['ai', 'ai']);
+    expect(mockPlay).toHaveBeenCalledTimes(2);
+    act(() => voice.setAutomatic(false));
+    await act(async () => { voice.speakRecognized('Muted'); voice.speakReviewed('Also muted'); await flush(); });
+    expect(mockCloud).toHaveBeenCalledTimes(2);
   });
   it('rejects speech while disconnected, for legacy/muted guests, or without online voices', () => {
     for (const value of ['unknown', 'muted'] as const) {

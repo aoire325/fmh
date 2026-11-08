@@ -38,7 +38,7 @@ describe('private meeting audio transport', () => {
     const t = pair(); const receive = (value: object) => t.right.receive(JSON.stringify(value));
     for (const value of [{ type: 'speech-end' }, { type: 'speech-chunk' },
       { type: 'speech-start', id: 1, size: MAX_MEETING_AUDIO + 1, text: 'Hi', kind: 'typed' },
-      { type: 'speech-start', id: 1, size: 3, text: 'Hi', kind: 'ai' }]) receive(value);
+      { type: 'speech-start', id: 1, size: 3, text: 'Hi', kind: 'invalid' }]) receive(value);
     expect(t.rightAudio).toEqual([]);
     receive({ type: 'speech-start', id: 1, size: 3, text: 'Hi', kind: 'typed' });
     receive({ type: 'speech-chunk', id: 1, index: 1, data: 'AQID' }); receive({ type: 'speech-end', id: 1 });
@@ -75,9 +75,9 @@ describe('private meeting audio transport', () => {
     t.left.dispose(); t.leftWire.readyState = 'closed'; await expect(second).rejects.toThrow(/stopped/);
     expect(t.rightAudio.filter(Boolean)).toEqual([]);
   });
-  it('does not send unreviewed guesses or speech to legacy clients', async () => {
+  it('sends recognized sign audio but rejects speech to legacy clients', async () => {
     const t = pair();
-    await expect(t.left.sendAudio(new Uint8Array([1]), 'Guess', 'ai', new AbortController().signal)).rejects.toThrow(/reviewed/);
+    await t.left.sendAudio(new Uint8Array([1]), 'Guess', 'ai', new AbortController().signal);
     const unknown = new MeetingSpeechTransport(t.leftWire, jest.fn(), jest.fn());
     await expect(unknown.sendAudio(new Uint8Array([1]), 'Hi', 'typed', new AbortController().signal)).rejects.toThrow(/updated/);
     expect(t.right.receive(JSON.stringify({ type: 'caption', sequence: 1, text: 'Hello', kind: 'typed' }))).toBe(false);

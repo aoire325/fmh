@@ -258,7 +258,7 @@ describe('home screen sentence stop action', () => {
     mockSentence.recording = false; mockSentence.busy = true; mockSentence.result = 'processing'; mockSentence.draft = 'Hello';
     act(() => root.render(React.createElement(HomeScreen)));
     const panel = container.querySelector('[data-testid="sentence-result"]')!;
-    expect(panel.textContent).toContain('Translating your recording…');
+    expect(panel.textContent).toContain('Processing… Translating your recording');
     expect(panel.querySelector('[role="progressbar"]')).not.toBeNull();
     expect(panel.querySelector<HTMLTextAreaElement>('textarea')!.value).toBe('Hello');
     expect(panel.querySelector<HTMLButtonElement>('button[aria-label="Add sentence to transcript"]')!.disabled).toBe(true);

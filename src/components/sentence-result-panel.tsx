@@ -18,7 +18,7 @@ type Props = {
 };
 
 const titles: Record<SentenceResult, string> = {
-  processing: 'Translating your recording…',
+  processing: 'Processing… Translating your recording',
   translated: 'Translation draft',
   unverified: 'Unverified draft',
   unrecognized: 'No clear sentence detected',

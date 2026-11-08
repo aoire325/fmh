@@ -50,7 +50,7 @@ export function useSentenceTranslator(enabled: boolean, active: boolean, session
     let recovered = '';
     inFlight.current = true; setBusy(true); setDraft('');
     setResult({ kind: 'processing', activation });
-    setMessage('Recording stopped. Translating your sentence on this phone…');
+    setMessage('Translating your sentence on this phone. Please wait.');
     try {
       const input = capture.current.finish();
       const text = await translateSentence(models.current, input, current,
@@ -59,6 +59,7 @@ export function useSentenceTranslator(enabled: boolean, active: boolean, session
           recovered = partial; setDraft(partial);
           setMessage(`Writing your draft · ${tokens} text tokens decoded…`);
         });
+      if (!text.trim()) throw new Error('No clear sentence detected. Keep your face, shoulders and hands visible, then record again.');
       if (current()) {
         setDraft(text); setResult({ kind: 'translated', activation });
         setMessage('Translation draft ready. Review or edit it before using it.');

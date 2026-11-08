@@ -70,7 +70,7 @@ describe('private AI preview before a guest joins', () => {
   };
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-    mockSentence.result = null; mockSentence.draft = ''; mockSentence.busy = false; mockSentence.clearDraft.mockClear();
+    mockSentence.result = null; mockSentence.draft = ''; mockSentence.message = ''; mockSentence.busy = false; mockSentence.clearDraft.mockClear();
     mockModelCalls = 0; mockSend.mockClear(); mockFeedback.mockClear(); mockSpeech.mockClear();
     mockTracker.error = ''; mockTracker.ready = true; mockTracker.retry.mockClear();
     container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
@@ -109,6 +109,18 @@ describe('private AI preview before a guest joins', () => {
     expect(mockSentence.clearDraft).toHaveBeenCalledTimes(1);
     render(true); expect(mockSend).toHaveBeenCalledTimes(1);
   });
+  it('shows sentence processing and unsuccessful results in focus view without opening options', () => {
+    render(true);
+    const mode = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent === 'Short sentence')!;
+    act(() => mode.click());
+    mockSentence.busy = true; mockSentence.result = 'processing'; mockSentence.message = 'Translating your sentence';
+    render(true, true, true); expect(container.textContent).toContain('Processing…');
+    mockSentence.busy = false; mockSentence.result = 'unrecognized'; mockSentence.message = 'Not enough hand movement';
+    render(true, true, true);
+    expect(container.textContent).toContain('No clear sentence detected');
+    expect(container.textContent).toContain('Please record again');
+    expect(mockSend).not.toHaveBeenCalled();
+  });
   it('shares each newly recognized word automatically without choosing a candidate', async () => {
     render(true); await sign();
     expect(mockSend).toHaveBeenCalledTimes(1);
@@ -137,7 +149,7 @@ describe('private AI preview before a guest joins', () => {
   });
   it('keeps the private preview usable in focus mode with icon controls', async () => {
     render(false, true, true);
-    expect(container.textContent).toBe('');
+    expect(container.textContent).toContain('Start with your hands lowered');
     await sign();
     expect(mockFeedback).toHaveBeenLastCalledWith(expect.objectContaining({ preview: expect.stringMatching(/hello/i) }));
     expect(container.querySelector('[aria-label="Finish sign for caption"]')!.textContent).toBe('');

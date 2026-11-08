@@ -42,6 +42,13 @@ describe('sentence attempt results', () => {
     act(() => { for (let t = 0; t <= 3000; t += 125) sentence.onFrame(frame(t)); });
   };
 
+  it('returns retry feedback when the decoder completes with empty text', async () => {
+    mockTranslate.mockResolvedValueOnce('   ');
+    await record(); await act(async () => sentence.finish());
+    expect(sentence.result).toBe('unrecognized'); expect(sentence.busy).toBe(false);
+    expect(sentence.draft).toBe(''); expect(sentence.message).toContain('No clear sentence detected');
+  });
+
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mockLoad.mockReset().mockResolvedValue({});

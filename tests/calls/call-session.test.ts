@@ -100,6 +100,26 @@ describe('call ownership and signaling', () => {
     peer.channel.bufferedAmount = 20000; expect(t.session.sendCaption('Delayed', 'typed')).toBe(false);
     t.session.end(); expect(t.session.sendCaption('stale', 'ai')).toBe(false);
   });
+  it('exchanges simultaneous sign captions in both directions on independent local streams', async () => {
+    const host = setup(); const guest = setup();
+    await host.start();
+    await guest.session.start('wss://host/calls', { action: 'join', name: 'Guest', code: 'ABCDEFGHJKLM', microphone: false, captions: true });
+    guest.socket.open();
+    const hostPeer = await host.ready(); const guestPeer = await guest.ready(false);
+    const guestChannel = new Channel(); guestPeer.emit('datachannel', { channel: guestChannel });
+    hostPeer.channel.open(); guestChannel.open(); hostPeer.connect(); guestPeer.connect();
+    hostPeer.channel.send.mockImplementation((data: string) => guestChannel.emit('message', { data }));
+    guestChannel.send.mockImplementation((data: string) => hostPeer.channel.emit('message', { data }));
+    expect(host.session.state.localStream).not.toBe(guest.session.state.localStream);
+    expect(host.session.state.captions).toBe(true); expect(guest.session.state.captions).toBe(true);
+    expect(host.session.sendCaption('HELLO', 'ai')).toBe(true);
+    expect(guest.session.sendCaption('THANK YOU', 'ai')).toBe(true);
+    expect(host.session.state.localCaption?.text).toBe('HELLO');
+    expect(guest.session.state.remoteCaption?.text).toBe('HELLO');
+    expect(guest.session.state.localCaption?.text).toBe('THANK YOU');
+    expect(host.session.state.remoteCaption?.text).toBe('THANK YOU');
+    host.session.end(); guest.session.end();
+  });
   it('stops media, clears captions, and closes both transports on hang-up', async () => {
     const t = setup(); await t.start(); const peer = await t.ready(); peer.channel.open(); peer.connect(); t.session.sendCaption('Hello', 'typed');
     t.session.end();

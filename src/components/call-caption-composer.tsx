@@ -68,7 +68,10 @@ export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCa
   const hands = frame ? visibleHands(frame).length : 0;
   const tracking = !active ? 'Camera paused' : !tracker.ready ? 'Waiting for camera tracking'
     : `${hands ? `${hands} hand${hands === 1 ? '' : 's'} detected` : 'No hands detected'} · ${frame && hasExpandedContext(frame) ? 'shoulders visible' : 'move back to show your shoulders'}`;
-  const recognitionMessage = sentenceMode ? sentence.message : word.status !== 'loaded' ? 'Loading sign recognition models…' : word.message;
+  const recognitionMessage = sentenceMode ? sentence.busy ? `Processing… ${sentence.message}`
+    : sentence.result === 'unrecognized' ? `No clear sentence detected. Please record again. ${sentence.message}`
+    : sentence.result === 'unverified' ? `The sentence was unclear. Review the partial draft in AI caption options. ${sentence.message}`
+    : sentence.message : word.status !== 'loaded' ? 'Loading sign recognition models…' : word.message;
   const message = !active ? 'Turn on your camera to sign.' : tracker.error || (!sentenceMode && word.error)
     || (!tracker.ready ? 'Preparing gesture tracking…' : recognitionMessage);
   const preview = active && tracker.ready ? sentenceMode ? sentence.draft : word.candidates[0] ?? '' : '';
@@ -126,6 +129,10 @@ export function CallCaptionComposer({ stream, active, canSend, frontCamera, onCa
   </View>;
   if (!compact) return fullPanel;
   return <View style={styles.compactPanel}>
+    <View accessibilityLiveRegion="polite" style={styles.compactStatus}>
+      {(sentenceMode ? sentence.busy : word.processing) ? <ActivityIndicator color={colors.accent} accessibilityLabel="Processing signs" /> : null}
+      <Text style={styles.compactHint}>{message}</Text>
+    </View>
     <View style={styles.compactToolbar}>
       {!sentenceMode && (!automatic || !canSend) && word.candidates.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.copy} contentContainerStyle={styles.compactChoices}>
         {word.candidates.map((label) => <ActionButton key={label} label={`Caption ${label}`} text={label} compact variant="dark"
@@ -166,6 +173,7 @@ const styles = StyleSheet.create({
   selected: { backgroundColor: colors.navy }, modeText: { color: colors.inkSoft, fontWeight: '600', textAlign: 'center', fontSize: 13 },
   selectedText: { color: colors.white }, copy: { flex: 1, gap: 4 }, body: { color: colors.navy, fontSize: 15, fontWeight: '600' },
   hint: { fontSize: 13, lineHeight: 19, color: colors.inkSoft }, choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  compactStatus: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8, paddingVertical: 6, flexShrink: 1 },
   compactPanel: { gap: 4 }, compactToolbar: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   compactChoices: { gap: 8, alignItems: 'center', paddingRight: 4 },
   compactTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' }, compactHint: { color: '#B7CDD6', fontSize: 12, lineHeight: 18 },
